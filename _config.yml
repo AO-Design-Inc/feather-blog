@@ -22,8 +22,8 @@ title:
 email: ok@feather.systems
 description: >- # this means to ignore newlines until "baseurl:"
   Blog
-baseurl: "/blog" # the subpath of your site, e.g. /blog
-url: "https://feather.systems" # the base hostname & protocol for your site, e.g. http://example.com
+baseurl: "/feather-blog" # the subpath of your site, e.g. /blog
+url: "https://ao-design-inc.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: OjasinKirpane
 github_username:  AO-Design-Inc
 
