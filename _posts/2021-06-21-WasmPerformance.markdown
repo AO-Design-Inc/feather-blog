@@ -618,8 +618,13 @@ First, we know that our benchmarks here are not rigorous in the slightest. Their
 </tr>
 <tr>
 <td>Singlethreaded-Rust</td>
-<td>890</td>
-<td>745</td>
+<td>296</td>
+<td>300</td>
+</tr>
+<tr>
+<td>Simple Assmemblyscript</td>
+<td>494</td>
+<td>497</td>
 </tr>
 <tr>
 <td>Optimized non-SIMD AssemblyScript</td>
