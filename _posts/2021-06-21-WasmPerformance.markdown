@@ -574,7 +574,7 @@ install:
 	npm i 
 ```
 
-### MULTITHREADED SIMD SPEED
+### Multithreaded SIMD Speed
 
 Benchmark results will be discussed near the end of this article, but the speed of the multithreaded SIMD code is quite astonishing, roughly 3x the speed of multithreaded JS using sharedarraybuffers, and I'm guessing that's held back by module message passing overheads. [HERE](https://mandelbrot-ascript.vercel.app/) is a basic mandelbrot zoom implementation using it (only works in firefox(≥90 on apple m1) and chrome, [here's](https://github.com/pretentious7/mandelbrot-ascript) the github repo.) I'll be working in boundary estimation and period checking along with xaos zoom algorithm into it in a couple of months, so stay tuned for that!
 
