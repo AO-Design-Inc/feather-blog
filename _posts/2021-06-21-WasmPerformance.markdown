@@ -463,7 +463,7 @@ Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-This is to ensure cross-origin isolation, which protects against memory being exfiltrated somehow (I might explore this in the future, but that's about all I know for the moment.) webassembly memories can also be created with a backing SharedArrayBuffer (Link to explanation), which allows fast multithreading, as separate web-workers can run the same webassembly module and write their results to the same memory, meaning that large objects don't need to be passed around using postmessage, and the many O(N) overheads to do with copying and creating new arrays can be avoided.
+This is to ensure cross-origin isolation, which protects against memory being exfiltrated somehow (I might explore this in the future, but that's about all I know for the moment.) webassembly memories can also be created with a backing SharedArrayBuffer, which allows fast multithreading, as separate web-workers can run the same webassembly module and write their results to the same memory, meaning that large objects don't need to be passed around using postmessage, and the many O(N) overheads to do with copying and creating new arrays can be avoided.
 
 However, while Assemblyscript [allows](https://www.assemblyscript.org/stdlib/builtins.html#atomics-%F0%9F%A6%84) access to atomic instructions, it does not implement any sort of locking. So any program that reads and writes to memory will need to be adjusted to thread with shared memory. This means that the program seen above, with its Complex class and set calls reading and writing to the linear memory quite often, is very prone to... interesting behaviour when threaded.
 
