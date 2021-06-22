@@ -72,8 +72,6 @@ As of when this article was published, the following versions are available on t
 
 <br>
 
-<br>
-
 
 ## Implementing the Mandelbrot Set in JavaScript *by Abhinuv Allu*
 <details>
@@ -247,8 +245,6 @@ These changes made the code perform a lot better. You can check out it's perform
 
 <br>
 
-<br>
-
 ## So, What is WebAssembly? *by Abhishek Cherath*
 <details>
 <summary>Click to Read</summary>
@@ -364,8 +360,6 @@ This version of the Mandelbrot also makes use of the SharedArrayBuffer, and had 
 </details>
 
 <br>
-
------
 
 <br>
 
@@ -590,8 +584,6 @@ I'm also fairly certain that this is the first(?) SIMD mandelbrot implementation
 </details>
 
 <br>
-
------
 
 <br>
 
