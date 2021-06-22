@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "How We Made One of the Fastest Mandelbrot Renderer on the Web."
+title:  "How We Made One of the Fastest Mandelbrot Renderers on the Web."
 date:   2021-06-21 11:10:02 -0500
 author: "Ojasvin Kirpane, Abhishek Cherath, Jo Gao & Abhinuv Allu"
 categories: jekyll update
