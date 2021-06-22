@@ -617,7 +617,7 @@ First, we know that our benchmarks here are not rigorous in the slightest. Their
 <td>129</td>
 </tr>
 <tr>
-<td>Singlethreaded-Rust</td>
+<td>Singlethreaded-Rust * **</td>
 <td>296</td>
 <td>300</td>
 </tr>
@@ -654,6 +654,8 @@ The performance advantage of webassembly (without SIMD) over javascript for this
 But the key insight here is clear, webassembly offers *predictable* performance, across browser engines. We'll be adding fallbacks for safari later to see if this holds there as well. Further, we'll compare the results to native code.
 
 **The rust code can likely be sped up with some optimizations here and there, but for a rough effort from a novice rust programmer, this is representative.*
+
+*** The rust code was improved by @MaxGraey and now lines up with what one would expect*
 
 See the demo [here](https://js-wasm-mandelbrot-benchmark-3.vercel.app/).
 
