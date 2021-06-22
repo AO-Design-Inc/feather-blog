@@ -622,7 +622,7 @@ First, we know that our benchmarks here are not rigorous in the slightest. Their
 <td>300</td>
 </tr>
 <tr>
-<td>Simple Assmemblyscript</td>
+<td>Simple Assemblyscript</td>
 <td>494</td>
 <td>497</td>
 </tr>
