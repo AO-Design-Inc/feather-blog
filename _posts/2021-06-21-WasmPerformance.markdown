@@ -70,7 +70,7 @@ As of when this article was published, the following versions are available on t
 
 <br>
 
------
+<br>
 
 <br>
 
@@ -245,7 +245,7 @@ These changes made the code perform a lot better. You can check out it's perform
 
 <br>
 
------
+<br>
 
 <br>
 
