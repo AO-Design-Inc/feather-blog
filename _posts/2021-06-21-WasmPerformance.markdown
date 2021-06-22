@@ -19,7 +19,7 @@ To elucidate, let's start with fractals & the mandelbrot set:
 
 ## The Mandelbrot Set
 
-The Mandelbrot Set is defined as the set of complex numbers for which the function $ { z_{n+1}=z_{n}^{2}+c } $ does not diverge when $z_{0} = 0$. An image of how the Mandelbrot set looks as follows. Points shaded black are in the set. We are using the Mandelbrot set to benchmark our code.
+The Mandelbrot Set is defined as the set of complex numbers for which the function $${ z_{n+1}=z_{n}^{2}+c }$$ does not diverge when $$z_{0} = 0$$. An image of how the Mandelbrot set looks as follows. Points shaded black are in the set. We are using the Mandelbrot set to benchmark our code.
 
 ![Mandelbrot Render]({{site.baseurl}}/assets/1-MandelbrotRender.png)
 
