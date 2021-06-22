@@ -660,7 +660,7 @@ As tools of application distribution, browsers have some undeniable advantages o
 
 Further, cloud offloading enables users to easily sustain state across devices and in some cases avoid calculation heavy code in the interests of battery life or smooth performance. The easiest way to realize these advantages is to distribute one's application in an environment that does this *by default*: the browser. But a prerequisite for this is that the experience is not overly hampered by being in the browser, and bringing webassembly to near native performance is a key part of that. 
 
-There is an opportunity here to allow people to access performance heavy applications like games and simulations on their devices without having to get into the nasty business of managing local state on their devices, which accounts for what, 99% of problems installing and using software? We want to help build this, and over the next few weeks, will be releasing demos to show what it might look like, so stay tuned! 
+There is an opportunity here to allow people to access performance heavy applications like games and simulations on their devices without having to get into the nasty business of managing local state, which accounts for what, 99% of problems installing and using software? We want to help build this, and over the next few weeks, will be releasing demos to show what it might look like, so stay tuned! 
 
 *Of course, the possible bad end here is that the canvas ends up as an inefficient GUI toolkit to have fungible programmers at the cost of user experience, we hope that doesn't happen.*
 
