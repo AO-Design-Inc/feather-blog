@@ -11,7 +11,7 @@ categories: jekyll update
 
 Hey, welcome to the Feather Systems blog. This is the first post of many, documenting our journey towards creating simpler systems for better performance on the web. 
 
-This post will document our initial experiments rendering the Mandelbrot set with JavaScript, Web-workers & emerging web technologies like WebAssembly.  You can access the project [here](https://js-wasm-mandelbrot-benchmark-3.vercel.app/) and view the code [here](https://github.com/AO-Design-Inc/js-wasm-mandelbrot-benchmark).
+This post will document our initial experiments rendering the Mandelbrot set with JavaScript, Web-workers & emerging web technologies like webassembly.  You can access the project [here](https://js-wasm-mandelbrot-benchmark-3.vercel.app/) and view the code [here](https://github.com/AO-Design-Inc/js-wasm-mandelbrot-benchmark).
 
 These experiments were tested and measured by the team to properly document each technology's advantages & disadvantages. 
 
@@ -451,7 +451,7 @@ export function compute(): void {
 }
 ```
 
-The only really noteworthy change was to not have `new` in the hot loop. The Assemblyscript garbage collector had some trouble with it and total allocation would exceed WebAssembly's 100  page memory limit[1]. I suspect that sort of code will be usable once the WebAssembly GC proposals, which allow wasm modules to hook into the browser's GC, are implemented.
+The only really noteworthy change was to not have `new` in the hot loop. The Assemblyscript garbage collector had some trouble with it and total allocation would exceed webassembly's 100  page memory limit[1]. I suspect that sort of code will be usable once the webassembly GC proposals, which allow wasm modules to hook into the browser's GC, are implemented.
 
 ### Threading
 
@@ -462,7 +462,7 @@ Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-This is to ensure cross-origin isolation, which protects against memory being exfiltrated somehow (I might explore this in the future, but that's about all I know for the moment.) WebAssembly memories can also be created with a backing SharedArrayBuffer (Link to explanation), which allows fast multithreading, as separate web-workers can run the same Webassembly module and write their results to the same memory, meaning that large objects don't need to be passed around using postmessage, and the many O(N) overheads to do with copying and creating new arrays can be avoided.
+This is to ensure cross-origin isolation, which protects against memory being exfiltrated somehow (I might explore this in the future, but that's about all I know for the moment.) webassembly memories can also be created with a backing SharedArrayBuffer (Link to explanation), which allows fast multithreading, as separate web-workers can run the same webassembly module and write their results to the same memory, meaning that large objects don't need to be passed around using postmessage, and the many O(N) overheads to do with copying and creating new arrays can be avoided.
 
 However, while Assemblyscript [allows](https://www.assemblyscript.org/stdlib/builtins.html#atomics-%F0%9F%A6%84) access to atomic instructions, it does not implement any sort of locking. So any program that reads and writes to memory will need to be adjusted to thread with shared memory. This means that the program seen above, with its Complex class and set calls reading and writing to the linear memory quite often, is very prone to... interesting behaviour when threaded.
 
