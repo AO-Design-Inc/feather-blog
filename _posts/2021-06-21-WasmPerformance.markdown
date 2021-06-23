@@ -341,7 +341,7 @@ Unfortunately, our Benchmarking Site is structured to use a web worker to call t
 
 This is an infeasible solution because I was unwilling to limit the availability of our benchmark site for this implementation. After many hours of tinkering with the existing setup, I found a workaround that eliminated the need for Webpack altogether: after compiling with wasm-bindgen, I copy and pasted the entire outputted .js file with the import and exports removed, appended the wrapper function I had written to it, and called `init(...)` on the outputted .wasm. 
 
-After confirming that this worked, I wrote a shell script to automatically do this after compilation. Albeit a little unpleasant on the eyes, it does the job:
+After confirming that this worked, A colleague and I  wrote a shell script to automatically do this after compilation. Albeit a little unpleasant on the eyes, it does the job:
 
 ```bash
 sed '/import\W/d;s/^export//g;/default/d' pkg/Mandelbrot.js > tmp_mandel_import.js
@@ -471,7 +471,7 @@ However, while Assemblyscript [allows](https://www.assemblyscript.org/stdlib/bui
 
 Exhibit A of nondeterministic behavior
 
-That being said, for small examples such as fractal calculation, its quite easy to limit mutability to local variables (which are on the stack, not in the linear memory, and so are not shared) and avoid the problem entirely. Like in the following code:
+That being said, for small examples such as fractal calculation, it's quite easy to limit mutability to local variables (which are on the stack, not in the linear memory, and so are not shared) and avoid the problem entirely. Like in the following code:
 
 ```jsx
 @inline
