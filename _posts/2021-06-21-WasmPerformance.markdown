@@ -4,6 +4,7 @@ title:  "How We Made One of the Fastest Mandelbrot Renderers on the Web."
 katex: true
 date:   2021-06-21 11:10:02 -0500
 author: "Ojasvin Kirpane, Abhishek Cherath, Jo Gao & Abhinuv Allu"
+permalink: mandelbrot
 categories: jekyll update
 ---
 ![Mandelbrot]({{site.baseurl}}/assets/1-Thumbnail-Mandelbrot.png)
