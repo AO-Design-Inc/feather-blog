@@ -31,6 +31,7 @@ github_username:  AO-Design-Inc
 theme: minima
 plugins:
   - jekyll-feed
+  - jekyll-redirect-from
 show_excerpts: true
 markdown: CommonMarkGhPages
 
