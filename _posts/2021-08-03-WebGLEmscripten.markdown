@@ -4,7 +4,7 @@ title:  "WebGL with Emscripten: The Bare Minimum"
 katex: true
 date:   2021-08-03 3:49:02 -0500
 author: "Jo Gao"
-redirect_from: "/jekyll/update/2021/06/21/WasmPerformance.html"
+redirect_from: "/jekyll/update/2021/08/03/webgl.html"
 permalink: WebGL
 categories: jekyll update
 ---
