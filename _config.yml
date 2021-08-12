@@ -34,6 +34,7 @@ plugins:
   - jekyll-redirect-from
 show_excerpts: true
 markdown: CommonMarkGhPages
+github: [metadata]
 
 # Exclude from processing.
 # The following items will not be processed, by default.
