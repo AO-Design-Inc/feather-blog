@@ -1,0 +1,11 @@
+﻿Benchmark,Firefox 89(ms),Chrome 91 (ms)
+Naive-js,2992,631
+Improved-js,1755,292
+Multithreaded-js,705,129
+Singlethreaded-Rust,890,745
+Simple assemblyscript,494,497
+optimized non-SIMD assemblyscript,250,262
+optimized SIMD assemblyscript,124,108
+SIMD multithreaded assemblyscript,43,43
+,,
+,,

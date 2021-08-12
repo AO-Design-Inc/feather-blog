@@ -9,18 +9,18 @@
 <meta property="og:locale" content="en_US" />
 <meta name="description" content="Blog" />
 <meta property="og:description" content="Blog" />
-<link rel="canonical" href="http://localhost:4000/feather-blog/404.html" />
-<meta property="og:url" content="http://localhost:4000/feather-blog/404.html" />
+<link rel="canonical" href="http://localhost:4000/404.html" />
+<meta property="og:url" content="http://localhost:4000/404.html" />
 <meta property="og:site_name" content="feather-blog" />
 <meta name="twitter:card" content="summary" />
 <meta property="twitter:title" content="feather-blog" />
 <script type="application/ld+json">
-{"@type":"WebPage","description":"Blog","headline":"feather-blog","url":"http://localhost:4000/feather-blog/404.html","@context":"https://schema.org"}</script>
+{"@type":"WebPage","description":"Blog","headline":"feather-blog","url":"http://localhost:4000/404.html","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
-<link rel="stylesheet" href="/feather-blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feather-blog/feed.xml" title="feather-blog" /></head>
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="feather-blog" /></head>
 <body><header class="site-header" role="banner">
 
-  <div class="wrapper"><a class="site-title" rel="author" href="/feather-blog/"><img src="https://feather.systems/assets/logo.svg" height="45px" width="45px"></a><nav class="site-nav">
+  <div class="wrapper"><a class="site-title" rel="author" href="/"><img src="https://feather.systems/assets/logo.svg" height="45px" width="45px"></a><nav class="site-nav">
         <input type="checkbox" id="nav-trigger" class="nav-trigger" />
         <label for="nav-trigger">
           <span class="menu-icon">
@@ -30,8 +30,7 @@
           </span>
         </label>
 
-        <div class="trigger"><a class="page-link" href="https:/feather.systems/">Main Site</a>
-            <a class="page-link" href="/feather-blog/about/">About</a></div>
+        <div class="trigger"><a class="page-link"><a style="text-decoration: none; color: #111;" href="https://feather.systems">Main Site</a></a></div>
       </nav></div>
 </header>
 <main class="page-content" aria-label="Content">
@@ -59,7 +58,7 @@
 
       </div>
     </main><footer class="site-footer h-card">
-    <data class="u-url" href="/feather-blog/"></data>
+    <data class="u-url" href="/"></data>
   
     <div class="wrapper">
   
@@ -68,11 +67,28 @@
         </div>
       </div>
   
-      <div class="social-links"><ul class="social-media-list"><li><a href="https://github.com/AO-Design-Inc"><svg class="svg-icon"><use xlink:href="/feather-blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">AO-Design-Inc</span></a></li><li><a href="https://www.twitter.com/OjasinKirpane"><svg class="svg-icon"><use xlink:href="/feather-blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">OjasinKirpane</span></a></li></ul>
+      <div class="social-links"><ul class="social-media-list"><li><a href="https://github.com/AO-Design-Inc"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">AO-Design-Inc</span></a></li><li><a href="https://www.twitter.com/OjasinKirpane"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">OjasinKirpane</span></a></li></ul>
 </div>
   
     </div>
   
-  </footer></body>
+  </footer><script>
+    
+    var elements = document.querySelectorAll('p');
+    Array.prototype.forEach.call(elements, function(el, i){
+        if(el.innerHTML=='[expand]') {
+            var parentcontent = el.parentNode.innerHTML.replace('<p>[expand]</p>','<div class="expand" style="display: none; height: 0; overflow: hidden;">').replace('<p>[/expand]</p>','</div>');
+            el.parentNode.innerHTML = parentcontent;
+        }
+    });
+
+    var elements = document.querySelectorAll('div.expand');
+    Array.prototype.forEach.call(elements, function(el, i){
+        el.previousElementSibling.innerHTML = el.previousElementSibling.innerHTML + '<span>..&nbsp; <a href="#" style="cursor: pointer;" onclick="this.parentNode.parentNode.nextElementSibling.style.display = \'block\'; this.parentNode.parentNode.nextElementSibling.style.height = \'auto\'; this.parentNode.style.display = \'none\';">read&nbsp;more&nbsp;&rarr;</a></span>';
+    });
+
+</script>
+
+  </body>
 
 </html>

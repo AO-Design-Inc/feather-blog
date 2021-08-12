@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>How We Made One of the Fastest Mandelbrot Renderer on the Web. | feather-blog</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="How We Made One of the Fastest Mandelbrot Renderer on the Web." />
+<meta name="author" content="Ojasvin Kirpane, Abhishek Cherath, Jo Gao & Abhinuv Allu" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Blog" />
+<meta property="og:description" content="Blog" />
+<link rel="canonical" href="http://localhost:4000/jekyll/update/2021/06/21/WasmPerformance.html" />
+<meta property="og:url" content="http://localhost:4000/jekyll/update/2021/06/21/WasmPerformance.html" />
+<meta property="og:site_name" content="feather-blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-06-21T11:10:02-05:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="How We Made One of the Fastest Mandelbrot Renderer on the Web." />
+<script type="application/ld+json">
+{"@type":"BlogPosting","description":"Blog","headline":"How We Made One of the Fastest Mandelbrot Renderer on the Web.","dateModified":"2021-06-21T11:10:02-05:00","datePublished":"2021-06-21T11:10:02-05:00","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/jekyll/update/2021/06/21/WasmPerformance.html"},"author":{"@type":"Person","name":"Ojasvin Kirpane, Abhishek Cherath, Jo Gao & Abhinuv Allu"},"url":"http://localhost:4000/jekyll/update/2021/06/21/WasmPerformance.html","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="feather-blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/"><img src="https://feather.systems/assets/logo.svg" height="45px" width="45px"></a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link"><a style="text-decoration: none; color: #111;" href="https://feather.systems">Main Site</a></a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">How We Made One of the Fastest Mandelbrot Renderer on the Web.</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2021-06-21T11:10:02-05:00" itemprop="datePublished">Jun 21, 2021
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name">Ojasvin Kirpane, Abhishek Cherath, Jo Gao & Abhinuv Allu</span></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p><img src="//assets/1-Thumbnail-Mandelbrot.png" alt="Mandelbrot" /></p>
+<h2 id="introduction">Introduction</h2>
+<p>Hey, welcome to the Feather Systems blog. This is the first post of many, documenting our journey towards creating simpler systems for better performance on the web.</p>
+<p>This post will document our initial experiments rendering the Mandelbrot set with JavaScript, Web-workers &amp; emerging web technologies like WebAssembly.  You can access the project <a href="https://js-wasm-mandelbrot-benchmark-3.vercel.app/">here</a> and view the code <a href="https://github.com/AO-Design-Inc/js-wasm-mandelbrot-benchmark">here</a>.</p>
+<p>These experiments were tested and measured by the team to properly document each technology's advantages &amp; disadvantages.</p>
+<p>To elucidate, let's start with fractals &amp; the mandelbrot set:</p>
+<h2 id="the-mandelbrot-set">The Mandelbrot Set</h2>
+<p>The Mandelbrot Set is defined as the set of complex numbers for which the function ${ z_{n+1}=z_{n}^{2}+c }$ does not diverge when $z_{0} = 0$. An image of how the Mandelbrot set looks as follows. Points shaded black are in the set. We are using the Mandelbrot set to benchmark our code.</p>
+<p><img src="//assets/1-MandelbrotRender.png" alt="Mandelbrot Render" /></p>
+<p>The Mandelbrot Set is stunning. We highly recommend getting lost in its beauty using our rendering website (<a href="https://mandelbrot-ascript.vercel.app/">https://mandelbrot-ascript.vercel.app/</a>). Click to zoom and Shift + Click to zoom out.</p>
+<h2 id="benchmark-structure">Benchmark Structure</h2>
+<details>
+<summary>Click to Read</summary>
+<p><a href="https://js-wasm-mandelbrot-benchmark-3.vercel.app/">The benchmarking site</a> is designed to display each iteration we developed with a rough estimate for performance measured in milliseconds. For each version, a function was written to perform the Mandelbrot calculations and return a JavaScript ImageData object that could be easily put on the Canvas. Once the user selects a version from the drop down menu, the corresponding function is called. Since the functions can take some time to complete, they are called from a Web-worker to prevent the main thread from freezing while the function runs. The performance is calculated using <code>performance.now()</code> calls before and after the function call that returns the ImageData object.</p>
+<p>Across all iterations, I used the following values:</p>
+<div class="language-jsx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">START_X_TOTAL</span><span class="p">:</span><span class="nx">f32</span> <span class="o">=</span> <span class="mf">0.300283</span>
+
+<span class="kd">const</span> <span class="nx">START_Y_TOTAL</span><span class="p">:</span><span class="nx">f32</span> <span class="o">=</span>  <span class="o">-</span><span class="mf">0.48857</span>
+
+<span class="kd">const</span> <span class="nx">WINDOW</span><span class="p">:</span><span class="nx">f32</span> <span class="o">=</span> <span class="mf">0.01</span>
+
+<span class="kd">const</span> <span class="nx">step_X</span><span class="p">:</span><span class="nx">f32</span><span class="o">=</span> <span class="nx">WINDOW</span><span class="o">/</span><span class="nx">f32</span><span class="p">(</span><span class="nx">canvas_width</span><span class="p">);</span>
+
+<span class="kd">const</span> <span class="nx">step_Y</span><span class="p">:</span><span class="nx">f32</span> <span class="o">=</span> <span class="nx">WINDOW</span><span class="o">/</span><span class="nx">f32</span><span class="p">(</span><span class="nx">canvas_height</span><span class="p">);</span>
+
+<span class="kd">const</span> <span class="nx">ITER_CONST</span><span class="p">:</span><span class="nx">i32</span> <span class="o">=</span> <span class="mi">1000</span>
+</code></pre></div></div>
+<p><strong>FOR MULTITHREADED</strong></p>
+<div class="language-jsx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">N_THREADS</span> <span class="o">=</span> <span class="mi">4</span>
+</code></pre></div></div>
+<p>We assume that the canvas width and height are integers. To determine if a point was in the Mandelbrot set, we iterated the Mandelbrot function on the point up to <code>ITER_CONST</code>, returning the number of times the function had iterated. We use the returned Mandelbrot value to set the color.</p>
+<p>You may notice that RGB values get clamped at 255, making it seem like the exercise of iterating all the way to 1000 is just for the sake of testing performance, which it is. (Here is a whole list of <a href="https://en.wikipedia.org/wiki/Plotting_algorithms_for_the_Mandelbrot_set">smarter and better coloring algorithms</a> that we will not be using in this benchmarking exercise.)</p>
+<p>As of when this article was published, the following versions are available on the Benchmarking Site:</p>
+<ul>
+<li>Naive JS single threaded</li>
+<li>Rust WASM using bindgen (single threaded)</li>
+<li>Assemblyscript old version (single threaded, not thread safe)</li>
+<li>Assemblyscript new version (single threaded, thread safe)</li>
+<li>Assemblyscript SIMD WASM (singlethreaded, multithreaded)</li>
+<li>New JS(less memory allocation) singlethreaded</li>
+<li>New JS SharedMemoryBuffer multithreaded</li>
+</ul>
+</details>
+<br>
+<hr />
+<br>
+<h2 id="implementing-the-mandelbrot-set-in-javascript-emby-abhinuv-alluem">Implementing the Mandelbrot Set in JavaScript <em>by Abhinuv Allu</em></h2>
+<details>
+<summary>Click to Read</summary>
+<p>I began the testing process with the web's best frenemy, Javascipt.</p>
+<p>I started with a naive approach to implement the Mandelbrot set in JavaScript and then try and optimize later. I started by creating a class for Complex numbers. This class would be able to add, multiply and return the magnitude. For the magnitude, I used a library function Math.hypot. Down below is our first initial implementation of the Complex class.</p>
+<div class="language-jsx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nx">Complex</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">real</span><span class="p">,</span> <span class="nx">imag</span><span class="p">){</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">real</span> <span class="o">=</span> <span class="nx">real</span><span class="p">;</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">imag</span> <span class="o">=</span> <span class="nx">imag</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="c1">//Function that add this complex number with another complex number, cplx</span>
+    <span class="nx">add</span><span class="p">(</span><span class="nx">cplx</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">real</span> <span class="o">+=</span> <span class="nx">cplx</span><span class="p">.</span><span class="nx">real</span><span class="p">;</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">imag</span> <span class="o">+=</span> <span class="nx">cplx</span><span class="p">.</span><span class="nx">imag</span><span class="p">;</span>
+      <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="c1">//Fuction that returns the magnitude of this complex number</span>
+     <span class="nx">mag</span><span class="p">(</span><span class="nx">cplx</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">hypot</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">real</span><span class="p">,</span><span class="k">this</span><span class="p">.</span><span class="nx">imag</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="c1">//Function that multiplies this complex number with another complex number, cplx</span>
+    <span class="nx">mul</span><span class="p">(</span><span class="nx">cplx</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kd">const</span> <span class="nx">real_part</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">real</span><span class="o">*</span><span class="nx">cplx</span><span class="p">.</span><span class="nx">real</span> <span class="o">-</span> <span class="k">this</span><span class="p">.</span><span class="nx">imag</span><span class="o">*</span><span class="nx">cplx</span><span class="p">.</span><span class="nx">imag</span><span class="p">;</span>
+      <span class="kd">const</span> <span class="nx">imag_part</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">imag</span><span class="o">*</span><span class="nx">cplx</span><span class="p">.</span><span class="nx">real</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">real</span><span class="o">*</span><span class="nx">cplx</span><span class="p">.</span><span class="nx">imag</span><span class="p">;</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">real</span> <span class="o">=</span> <span class="nx">real_part</span><span class="p">;</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">imag</span> <span class="o">=</span> <span class="nx">imag_part</span><span class="p">;</span>
+      <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+</code></pre></div></div>
+<p>The program iterated through each element of the canvas to compute whether or not they were in the Mandelbrot set.</p>
+<div class="language-jsx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">mandelbrot</span><span class="p">(</span><span class="nx">cplx</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">let</span> <span class="nx">z</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Complex</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+  
+  <span class="kd">let</span> <span class="nx">count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="k">while</span> <span class="p">(</span><span class="nx">z</span><span class="p">.</span><span class="nx">mag</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="mi">2</span> <span class="o">&amp;&amp;</span> <span class="nx">count</span> <span class="o">&lt;</span> <span class="nx">ITER_CONST</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">z</span> <span class="o">=</span> <span class="p">(</span><span class="nx">z</span><span class="p">.</span><span class="nx">mul</span><span class="p">(</span><span class="nx">z</span><span class="p">)).</span><span class="nx">add</span><span class="p">(</span><span class="nx">cplx</span><span class="p">);</span>
+    <span class="nx">count</span><span class="o">++</span><span class="p">;</span>
+  <span class="p">}</span>
+  
+  <span class="k">return</span> <span class="nx">count</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>These data points were added to an array which is then painted onto the Canvas. I had some ideas about optimizations with help from the profiler, however the most fascinating insight was that the Math.hypot function for two numbers is an order of magnitude slower than squaring, adding, and then computing the square root. During the profiling of the initial code I found out that Math.hypot was taking up most of the time.</p>
+<p><img src="//assets/1-MathHypot.png" alt="Hypotenuse" /></p>
+<h3 id="improved-javascript">Improved JavaScript</h3>
+<p>To improve the initial naive approach, I decided to add multithreading. I started this with a naive way of having the worker compute each point and then send it back to receive the next point but, the message overhead was immense and resulted in a single threaded function as I only had one worker. The next step was experimenting with divisibility classes to add multiple workers. But this had the same problem where the overhead of sending &amp; receiving a message from the workers was just too much. Eventually, I figured out that I would have each worker compute a set number of rows at a time.</p>
+<div class="language-jsx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">//This is in the main function which calls the workers to do the work</span>
+<span class="k">for</span><span class="p">(</span><span class="kd">let</span> <span class="nx">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="nx">i</span><span class="o">&lt;</span><span class="nx">workerCount</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">){</span>
+  <span class="kd">const</span> <span class="nx">worker</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Worker</span><span class="p">(</span><span class="dl">"</span><span class="s2">worker.js</span><span class="dl">"</span><span class="p">);</span>
+  <span class="kd">const</span> <span class="nx">INDEXES_PER_WORKER</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">((</span><span class="nx">X_LEN</span><span class="o">*</span><span class="nx">Y_LEN</span><span class="p">)</span><span class="o">/</span><span class="nx">workerCount</span><span class="p">);</span>
+  <span class="kd">const</span> <span class="nx">N_ROWS_PER_THREAD</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nx">X_LEN</span><span class="o">/</span><span class="nx">workerCount</span><span class="p">);</span>
+  <span class="kd">const</span> <span class="nx">START_XC</span> <span class="o">=</span> <span class="nx">N_ROWS_PER_THREAD</span> <span class="o">*</span> <span class="nx">i</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">START_INDEX</span> <span class="o">=</span> <span class="nx">i</span><span class="o">*</span><span class="nx">INDEXES_PER_WORKER</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">END_INDEX</span><span class="o">=</span> <span class="nx">START_INDEX</span> <span class="o">+</span> <span class="nx">INDEXES_PER_WORKER</span><span class="p">;</span>
+  
+  <span class="nx">worker</span><span class="p">.</span><span class="nx">onmessage</span> <span class="o">=</span> <span class="p">({</span><span class="nx">data</span><span class="p">})</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">COMPUTED_ROWS</span> <span class="o">=</span> <span class="nx">data</span><span class="p">;</span>
+    <span class="nx">points_array</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="o">=</span> <span class="nx">COMPUTED_ROWS</span><span class="p">;</span>
+     <span class="nx">doneCount</span><span class="o">++</span><span class="p">;</span>
+    <span class="k">if</span><span class="p">(</span><span class="nx">doneCount</span> <span class="o">==</span> <span class="nx">workerCount</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">points_array</span> <span class="o">=</span> <span class="nx">points_array</span><span class="p">.</span><span class="nx">flat</span><span class="p">();</span>
+
+      
+      <span class="nx">draw</span><span class="p">(</span><span class="nx">points_array</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+</code></pre></div></div>
+<div class="language-jsx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">//This is how it looks now in the worker function</span>
+<span class="nx">onmessage</span> <span class="o">=</span> <span class="kd">function</span><span class="p">({</span><span class="nx">data</span><span class="p">})</span> <span class="p">{</span>
+  <span class="kd">const</span><span class="p">{</span><span class="nx">START_XC</span><span class="p">,</span> <span class="nx">STEP_X</span><span class="p">,</span> <span class="nx">STEP_Y</span><span class="p">,</span> <span class="nx">N_ROWS_PER_THREAD</span><span class="p">,</span> <span class="nx">Y_LEN</span><span class="p">}</span> <span class="o">=</span> <span class="nx">data</span><span class="p">;</span>
+  <span class="kd">const</span> <span class="nx">points_in_thread</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Array</span><span class="p">(</span><span class="nx">Y_LEN</span> <span class="o">*</span> <span class="nx">N_ROWS_PER_THREAD</span><span class="p">);</span>
+
+    <span class="k">for</span><span class="p">(</span><span class="kd">let</span> <span class="nx">x</span> <span class="o">=</span> <span class="o">-</span><span class="mf">2.0</span> <span class="o">+</span> <span class="nx">START_XC</span> <span class="o">*</span> <span class="nx">STEP_X</span><span class="p">,</span> <span class="nx">count_x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">count_x</span> <span class="o">&lt;</span> <span class="nx">N_ROWS_PER_THREAD</span><span class="p">;</span> <span class="nx">x</span><span class="o">+=</span><span class="nx">STEP_X</span><span class="p">,</span> <span class="nx">count_x</span><span class="o">++</span><span class="p">){</span>
+      <span class="k">for</span><span class="p">(</span> <span class="kd">let</span> <span class="nx">y</span> <span class="o">=</span> <span class="o">-</span><span class="mf">2.0</span><span class="p">,</span> <span class="nx">count_y</span> <span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="nx">count_y</span> <span class="o">&lt;</span> <span class="nx">Y_LEN</span><span class="p">;</span> <span class="nx">y</span><span class="o">+=</span><span class="nx">STEP_Y</span><span class="p">,</span> <span class="nx">count_y</span><span class="o">++</span><span class="p">){</span>
+        <span class="nx">points_in_thread</span><span class="p">[</span><span class="nx">count_x</span> <span class="o">*</span> <span class="nx">Y_LEN</span> <span class="o">+</span> <span class="nx">count_y</span><span class="p">]</span> <span class="o">=</span> <span class="nx">mandelbrot</span><span class="p">(</span><span class="k">new</span> <span class="nx">Complex</span><span class="p">(</span><span class="nx">y</span><span class="p">,</span><span class="nx">x</span><span class="p">));</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="nx">postMessage</span><span class="p">(</span><span class="nx">points_in_thread</span><span class="p">);</span>
+  <span class="p">}</span>
+</code></pre></div></div>
+<h3 id="shared-buffer">Shared Buffer</h3>
+<p>Since all the points would be added to the same array it would make sense that having a shared buffer to reduce the overhead needed to send array points would decrease the compute time. So I added a shared buffer that was formatted like an ImageData object so it would be easier to paint it onto the canvas. This required some rewriting of the some steps here and there, but it ended up being faster.</p>
+<p>The other issue with using a Shared Buffer is that I had to add promises to the code, so werefactored it to include promises.</p>
+<div class="language-jsx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">//This is in the main function which calls the workers to do the work</span>
+<span class="k">return</span> <span class="k">new</span> <span class="nb">Promise</span><span class="p">((</span><span class="nx">resolve</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">worker</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Worker</span><span class="p">(</span><span class="dl">"</span><span class="s2">benchmarks/multithreaded-js/sharedworker.js</span><span class="dl">"</span><span class="p">);</span>
+
+    <span class="nx">worker</span><span class="p">.</span><span class="nx">postMessage</span><span class="p">(</span><span class="nx">parameters</span><span class="p">);</span>
+
+    <span class="nx">worker</span><span class="p">.</span><span class="nx">onmessage</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(){</span>
+      <span class="nx">resolve</span><span class="p">(</span><span class="dl">"</span><span class="s2">worker finished</span><span class="dl">"</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">});</span>
+<span class="p">}</span>
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">returnSharedBufferjs</span><span class="p">(</span><span class="nx">START_X_TOTAL</span><span class="p">,</span> <span class="nx">START_Y_TOTAL</span><span class="p">,</span> <span class="nx">CANVAS_WIDTH</span><span class="p">,</span> <span class="nx">CANVAS_HEIGHT</span><span class="p">,</span> <span class="nx">WINDOW</span><span class="p">){</span>
+  
+  <span class="kd">const</span> <span class="nx">X_LEN</span> <span class="o">=</span> <span class="nx">CANVAS_WIDTH</span><span class="p">;</span>
+  <span class="kd">const</span> <span class="nx">Y_LEN</span> <span class="o">=</span> <span class="nx">CANVAS_HEIGHT</span><span class="p">;</span>
+  <span class="kd">const</span> <span class="nb">window</span> <span class="o">=</span> <span class="nx">WINDOW</span><span class="p">;</span>
+  <span class="kd">const</span> <span class="nx">STEP_X</span> <span class="o">=</span> <span class="nb">window</span><span class="o">/</span><span class="nx">X_LEN</span><span class="p">;</span>
+  <span class="kd">const</span> <span class="nx">STEP_Y</span> <span class="o">=</span> <span class="nb">window</span><span class="o">/</span><span class="nx">Y_LEN</span><span class="p">;</span>
+  <span class="kd">const</span> <span class="nx">workerCount</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span>
+  <span class="kd">const</span> <span class="nx">sharedBuffer</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">SharedArrayBuffer</span><span class="p">(</span><span class="nx">X_LEN</span><span class="o">*</span><span class="nx">Y_LEN</span><span class="o">*</span><span class="mi">4</span><span class="p">);</span>
+  <span class="kd">const</span> <span class="nx">sharedArray</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Uint8ClampedArray</span><span class="p">(</span><span class="nx">sharedBuffer</span><span class="p">);</span>
+  <span class="nx">sharedArray</span><span class="p">.</span><span class="nx">fill</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+
+  <span class="kd">const</span> <span class="nx">N_ROWS_PER_THREAD</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nx">X_LEN</span><span class="o">/</span><span class="nx">workerCount</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">START_YC</span> <span class="o">=</span> <span class="nx">N_ROWS_PER_THREAD</span><span class="p">;</span>
+
+  <span class="kd">var</span> <span class="nx">parameters</span> <span class="o">=</span> <span class="p">{</span><span class="nx">START_X_TOTAL</span><span class="p">,</span><span class="nx">START_Y_TOTAL</span><span class="p">,</span> <span class="nx">START_YC</span><span class="p">,</span> <span class="nx">STEP_X</span><span class="p">,</span> <span class="nx">STEP_Y</span><span class="p">,</span> <span class="nx">N_ROWS_PER_THREAD</span><span class="p">,</span> <span class="nx">X_LEN</span><span class="p">,</span> <span class="nx">sharedArray</span><span class="p">};</span>
+  <span class="kd">var</span> <span class="nx">promises</span> <span class="o">=</span> <span class="p">[];</span>
+
+  <span class="k">for</span><span class="p">(</span><span class="kd">let</span> <span class="nx">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="nx">i</span><span class="o">&lt;</span><span class="nx">workerCount</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">){</span>
+
+    <span class="nx">parameters</span><span class="p">.</span><span class="nx">START_YC</span> <span class="o">=</span> <span class="nx">N_ROWS_PER_THREAD</span> <span class="o">*</span> <span class="nx">i</span><span class="p">;</span>
+
+    <span class="nx">promises</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">createWorker</span><span class="p">(</span><span class="nx">parameters</span><span class="p">));</span>
+  <span class="p">}</span>
+</code></pre></div></div>
+<div class="language-jsx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">//This is how it looks now in the worker function</span>
+<span class="nx">onmessage</span> <span class="o">=</span> <span class="kd">function</span><span class="p">({</span><span class="nx">data</span><span class="p">})</span> <span class="p">{</span>
+    <span class="kd">const</span><span class="p">{</span><span class="nx">START_X_TOTAL</span><span class="p">,</span><span class="nx">START_Y_TOTAL</span><span class="p">,</span><span class="nx">START_YC</span><span class="p">,</span> <span class="nx">STEP_X</span><span class="p">,</span> <span class="nx">STEP_Y</span><span class="p">,</span> <span class="nx">N_ROWS_PER_THREAD</span><span class="p">,</span> <span class="nx">X_LEN</span><span class="p">,</span> <span class="nx">sharedArray</span><span class="p">}</span> <span class="o">=</span> <span class="nx">data</span><span class="p">;</span>
+    <span class="k">for</span><span class="p">(</span> <span class="kd">let</span> <span class="nx">y</span> <span class="o">=</span> <span class="nx">START_Y_TOTAL</span><span class="o">+</span> <span class="nx">START_YC</span> <span class="o">*</span> <span class="nx">STEP_Y</span><span class="p">,</span> <span class="nx">count_y</span> <span class="o">=</span><span class="nx">START_YC</span><span class="p">;</span> <span class="nx">count_y</span> <span class="o">&lt;</span> <span class="nx">N_ROWS_PER_THREAD</span><span class="o">+</span><span class="nx">START_YC</span><span class="p">;</span> <span class="nx">y</span><span class="o">+=</span><span class="nx">STEP_Y</span><span class="p">,</span> <span class="nx">count_y</span><span class="o">++</span><span class="p">)</span>
+    <span class="p">{</span>
+      <span class="k">for</span><span class="p">(</span><span class="kd">let</span> <span class="nx">x</span> <span class="o">=</span> <span class="nx">START_X_TOTAL</span> <span class="p">,</span> <span class="nx">count_x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">count_x</span> <span class="o">&lt;</span> <span class="nx">X_LEN</span><span class="p">;</span> <span class="nx">x</span><span class="o">+=</span><span class="nx">STEP_X</span><span class="p">,</span> <span class="nx">count_x</span><span class="o">++</span><span class="p">)</span>
+      <span class="p">{</span>
+        
+        <span class="kd">let</span> <span class="nx">index</span> <span class="o">=</span> <span class="mi">4</span><span class="o">*</span><span class="p">(</span><span class="nx">count_x</span>  <span class="o">+</span> <span class="nx">count_y</span><span class="o">*</span> <span class="nx">X_LEN</span><span class="p">);</span>
+        <span class="nx">val</span> <span class="o">=</span> <span class="nx">mandelbrot</span><span class="p">(</span><span class="k">new</span> <span class="nx">Complex</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span><span class="nx">y</span><span class="p">));</span>
+         <span class="nx">sharedArray</span><span class="p">[</span><span class="nx">index</span><span class="o">+</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nx">val</span><span class="p">;</span> 
+         <span class="nx">sharedArray</span><span class="p">[</span><span class="nx">index</span><span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nx">val</span><span class="p">;</span> 
+         <span class="nx">sharedArray</span><span class="p">[</span><span class="nx">index</span><span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="nx">val</span><span class="p">;</span> 
+         <span class="nx">sharedArray</span><span class="p">[</span><span class="nx">index</span><span class="o">+</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mi">255</span><span class="p">;</span>      
+      <span class="p">}</span>
+    <span class="p">}</span>
+      <span class="nx">postMessage</span><span class="p">(</span><span class="dl">"</span><span class="s2">done</span><span class="dl">"</span><span class="p">);</span>
+  <span class="p">}</span>
+</code></pre></div></div>
+<p>These changes made the code perform a lot better. You can check out it's performance in the &quot;<a href="https://www.notion.so/On-WebAssembly-Performance-and-the-Mandelbrot-WORKING-TITLE-96760f3f113343c894c00f52cdef3ef0">Results</a>&quot; section. JavaScript was extremely performant (especially on Chrome) and gave us hope that pushing the boundaries of speed on the web was possible.</p>
+</details>
+<br>
+<hr />
+<br>
+<h2 id="so-what-is-webassembly-emby-abhishek-cherathem">So, What is WebAssembly? <em>by Abhishek Cherath</em></h2>
+<details>
+<summary>Click to Read</summary>
+<p>In our quest to further optimize performance, we used webassembly, an emerging web technology optimized for what we are trying to achieve. So, what is it?
+Insofar as an overview is concerned, nothing beats Lin Clark's cartoon intro <a href="https://hacks.mozilla.org/2017/02/a-cartoon-intro-to-webassembly/">here</a>, and the MDN docs <a href="https://developer.mozilla.org/en-US/docs/WebAssembly">here</a>. Put simply, webAssembly is a low level typed language that targets the browser's VM. For some reasons[1] , it's very quick and easy to compile into decently fast machine code.</p>
+<p>Fundamentally, the language was designed to offer the best possible latency (time to execution) and speed of execution. Low latency is achieved by having a small binary representation (vs javascript's textual representation) and having type definitions and a function table at the start of a .wasm module, which allows compilers to compile in a streaming fashion, instead of needing to have access to the entire file before starting.</p>
+<p>Speed of execution requires slow compilation with multiple passes for the compiler to accurately assess the best register allocation, optimize out unnecessary instructions and do whatever other things compilers do. (<em>note: I have frankly no idea what goes into compiler optimization, I just know it takes time</em>)</p>
+<p>To satisfy both these goals, browsers (atleast Firefox and Chrome) have two compilers for WebAssembly, the first compiles the module as it's called from the network, and is basically instant (<a href="https://v8.dev/docs/wasm-compilation-pipeline">here</a>, chrome devs claim that theirs can do on the order of 10+ mb of code per second, so the bottleneck will almost always be the speed of the network rather than the compiler.) The second does optimization and dynamically replaces the unoptimized bytecode from the first when it's done.</p>
+<p>It's interesting to note here that, <em>a priori</em> there's no reason to expect that webAssembly code for high performance stuff [2] (like fractal calculation) will be any faster than its javascript counterpart. Since the hot loop (calculating escape time) is running many thousands of times, one would expect the javascript JIT compiler to infer the output types and get basically similar bytecode, while amortizing its greater overhead considering workload size.</p>
+<p>In a later article, I will be examining this conjecture, and taking a deeper look at the flamegraphs and bytecode generated by our benchmarks.</p>
+<p>The other interesting thing about WebAssembly is its memory model, programs do not have access to their own instructions and stack machine memory (so no self modifying code, and no messing with values on the stack). What they do have access to is a block of linear memory, which is backed by a javascript ArrayBuffer, and byte addressed (ie. memory[0] is 1 byte long.)</p>
+<p><em>[1]I'm not entirely sure why, but it's some combination of coding for a simple stack machine, having type information, linear memory, and being easy to parse.</em></p>
+<p><em>[2]This is <strong>mostly</strong> true, except for vectorization. SIMD (Single Instruction Multiple Data) instructions are featured in the WebAssembly spec and implemented by chrome and firefox, which do not expose them in js, and have no plans to do so. (although</em> I <em>suppose there's nothing stopping a JIT from autovectorizing, is there?)</em></p>
+</details>
+<p><br><br></p>
+<blockquote>
+<p><strong>Our Approach to WebAssembly</strong>: As many languages can be compiled to WebAssembly, we looked at two of the most commonly used ones: Rust &amp; AssemblyScript. In the following sections we will describe our approach to these two languages.</p>
+</blockquote>
+<p><br><br></p>
+<h2 id="rust-implementation-emby-jo-gaoem">Rust Implementation <em>by Jo Gao</em></h2>
+<details>
+<summary>Click to Read</summary>
+<h3 id="singlethreaded">Singlethreaded</h3>
+<p>I wrote a similar implementation of the function in Rust that would return an ImageData object of the Mandelbrot Set. It uses <a href="https://rustwasm.github.io/wasm-bindgen/">wasm-bindgen</a>, a Rust library that will compile Rust code to webAssembly, and then generate the bindings and glue between JavaScript and webAssembly so that it can be run on the web. It handles all the type conversions between JavaScript and webAssembly and facilitates the compilation of Rust to webAssembly.</p>
+<p>In the iterative <code>in_mandelbrot</code> function, <code>count</code> is set to iterate all the way to 1000 for benchmarking purposes. When returning, <code>count</code> is set to 255 if larger than 255 to prevent having to cast numbers larger than 255 to u8.</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">fn</span> <span class="nf">in_mandelbrot</span><span class="p">(</span><span class="n">cplx</span><span class="p">:</span> <span class="o">&amp;</span><span class="n">Complex</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">u8</span> <span class="p">{</span>
+    <span class="k">const</span> <span class="n">ITER_CONST</span><span class="p">:</span> <span class="nb">i32</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">;</span>
+    <span class="k">let</span> <span class="k">mut</span> <span class="n">z</span> <span class="o">=</span> <span class="nf">build_complex</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">);</span>
+    <span class="k">let</span> <span class="k">mut</span> <span class="n">count</span><span class="p">:</span> <span class="nb">i32</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="k">while</span> <span class="n">z</span><span class="nf">.mag</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="mf">2.0</span> <span class="o">&amp;&amp;</span> <span class="n">count</span> <span class="o">&lt;</span> <span class="n">ITER_CONST</span> <span class="p">{</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="p">(</span><span class="n">z</span><span class="nf">.square</span><span class="p">())</span><span class="nf">.add</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cplx</span><span class="p">);</span> <span class="c">// z = z^2 + cplx</span>
+        <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">255</span> <span class="p">{</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">255</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">count</span> <span class="k">as</span> <span class="nb">u8</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>The magic of wasm-bindgen kicks in here, allowing us to create the ImageData object right in the Rust code by providing the type and the constructor signature:</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">#[wasm_bindgen]</span>
+<span class="k">extern</span> <span class="s">"C"</span> <span class="p">{</span>
+    <span class="k">pub</span> <span class="k">type</span> <span class="n">ImageData</span><span class="p">;</span>
+
+    <span class="nd">#[wasm_bindgen(constructor,</span> <span class="nd">catch)]</span>
+    <span class="k">fn</span> <span class="nf">new</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="o">&amp;</span><span class="n">Uint8ClampedArray</span><span class="p">,</span> <span class="n">width</span><span class="p">:</span> <span class="nb">f64</span><span class="p">,</span> <span class="n">height</span><span class="p">:</span> <span class="nb">f64</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="n">Result</span><span class="o">&lt;</span><span class="n">ImageData</span><span class="p">,</span> <span class="n">JsValue</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nd">#[wasm_bindgen]</span>
+<span class="k">pub</span> <span class="k">fn</span> <span class="nf">run</span><span class="p">(</span><span class="n">start_x</span><span class="p">:</span> <span class="nb">f64</span><span class="p">,</span> <span class="n">start_y</span><span class="p">:</span> <span class="nb">f64</span><span class="p">,</span> <span class="n">width</span><span class="p">:</span> <span class="nb">u32</span><span class="p">,</span> <span class="n">height</span><span class="p">:</span> <span class="nb">u32</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">f64</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="n">ImageData</span><span class="p">{</span>
+
+    <span class="k">let</span> <span class="n">y_len</span><span class="p">:</span> <span class="nb">i32</span> <span class="o">=</span> <span class="n">height</span> <span class="k">as</span> <span class="nb">i32</span><span class="p">;</span>
+    <span class="k">let</span> <span class="n">x_len</span><span class="p">:</span> <span class="nb">i32</span> <span class="o">=</span> <span class="n">width</span> <span class="k">as</span> <span class="nb">i32</span><span class="p">;</span>
+
+    <span class="k">let</span> <span class="n">pixels</span><span class="p">:</span> <span class="nb">usize</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_len</span> <span class="o">*</span> <span class="n">y_len</span><span class="p">)</span> <span class="k">as</span> <span class="nb">usize</span><span class="p">;</span>
+
+    <span class="k">let</span> <span class="k">mut</span> <span class="n">points_array</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span><span class="mi">0</span><span class="p">;</span> <span class="n">pixels</span><span class="o">*</span><span class="mi">4</span><span class="p">];</span>
+    <span class="nf">fill_mandelbrot</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span> <span class="n">points_array</span><span class="p">,</span> <span class="n">start_x</span><span class="p">,</span> <span class="n">start_y</span><span class="p">,</span> <span class="n">x_len</span><span class="p">,</span> <span class="n">y_len</span><span class="p">,</span> <span class="n">window</span><span class="p">);</span>
+
+    <span class="k">let</span> <span class="n">pointer</span> <span class="o">=</span> <span class="n">points_array</span><span class="nf">.as_ptr</span><span class="p">()</span> <span class="k">as</span> <span class="nb">usize</span><span class="p">;</span>
+
+    <span class="k">let</span> <span class="n">mem</span> <span class="o">=</span> <span class="nn">wasm_bindgen</span><span class="p">::</span><span class="nf">memory</span><span class="p">()</span><span class="py">.unchecked_into</span><span class="p">::</span><span class="o">&lt;</span><span class="nn">WebAssembly</span><span class="p">::</span><span class="n">Memory</span><span class="o">&gt;</span><span class="p">();</span>
+    <span class="k">let</span> <span class="n">new_array</span> <span class="o">=</span> <span class="nn">Uint8ClampedArray</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="o">&amp;</span><span class="n">mem</span><span class="nf">.buffer</span><span class="p">())</span><span class="nf">.slice</span><span class="p">(</span><span class="n">pointer</span> <span class="k">as</span> <span class="nb">u32</span><span class="p">,</span> <span class="p">(</span><span class="n">pointer</span> <span class="o">+</span> <span class="n">pixels</span><span class="o">*</span><span class="mi">4</span><span class="p">)</span> <span class="k">as</span> <span class="nb">u32</span><span class="p">);</span>
+    <span class="nn">ImageData</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="o">&amp;</span><span class="n">new_array</span><span class="p">,</span> <span class="n">x_len</span><span class="nf">.into</span><span class="p">(),</span> <span class="n">y_len</span><span class="nf">.into</span><span class="p">())</span><span class="nf">.unwrap</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>After compiling this code, wasm-bindgen outputs a number of files that are meant to be bundled using <a href="https://webpack.js.org/">Webpack</a> and imported to your JavaScript file as an ES6 module, allowing access to the functions that were written in Rust. The idea is that after compiling and importing the module, calling <code>run(...)</code>would return a whole JavaScript ImageData Object.</p>
+<p>Unfortunately, our Benchmarking Site is structured to use a web worker to call this function. Modules cannot be imported to web workers. However, they can be imported to module workers, web workers that support module import, but as of today, Firefox does not support this feature.</p>
+<p>This is an infeasible solution because I was unwilling to limit the availability of our benchmark site for this implementation. After many hours of tinkering with the existing setup, I found a workaround that eliminated the need for Webpack altogether: after compiling with wasm-bindgen, I copy and pasted the entire outputted .js file with the import and exports removed, appended the wrapper function I had written to it, and called <code>init(...)</code> on the outputted .wasm.</p>
+<p>After confirming that this worked, I wrote a shell script to automatically do this after compilation. Albeit a little unpleasant on the eyes, it does the job:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sed</span> <span class="s1">'/import\W/d;s/^export//g;/default/d'</span> pkg/Mandelbrot.js <span class="o">&gt;</span> tmp_mandel_import.js
+<span class="nb">cat </span>tmp_mandel_import.js  mandel_src.js <span class="o">&gt;</span> Mandelbrot.js
+<span class="nb">rm </span>tmp_mandel_import.js
+</code></pre></div></div>
+<h3 id="rust-amp-webassembly-multi-threaded">Rust &amp; WebAssembly Multi-Threaded</h3>
+<p>To further improve performance in Rust, I carried out the same calculations, but in parallel this time. An advantage of the Mandelbrot Set is that determining whether a pixel falls within the set or not can be done completely independently of other pixels. The outcome of each pixel has no effect on the others, making the transition to multithreading straightforward.</p>
+<p>I used the <a href="https://github.com/rustwasm/wasm-bindgen/tree/master/examples/raytrace-parallel">Parallel Raytracing example</a>. given in the Wasm-Bindgen repo, as a starting point.  Using a combination of web workers and the Rayon Crate for data parallelism in Rust yielded a pretty fast multithreaded Mandelbrot Set.</p>
+<p><em>Unfortunately,</em> I <em>was unable to include this version of the Mandelbrot in the final Benchmarking website</em> because I ran into a similar problem with the wasm-bindgen and module output. This time, it was further complicated by the Webworkers being created from within the Rust code. The funky workaround that had allowed for the singlethreaded RustWasm example to run on the Benchmarking Site failed to work the same magic for this implementation.</p>
+<p>This version of the Mandelbrot also makes use of the SharedArrayBuffer, and had it been on the site, would not work in Safari and browsers that do not support SharedArrayBuffer Objects.</p>
+</details>
+<br>
+<hr />
+<br>
+<h2 id="assemblyscript-emby-abhishek-cherathem">AssemblyScript <em>by Abhishek Cherath</em></h2>
+<details>
+<summary>Click to Read</summary>
+<p>AssemblyScript compiles a subset of typescript to webassembly. To get an idea of how simple it is to write it, here's essentially the same javascript code from earlier, with type annotations and minor changes for WebAssembly:</p>
+<div class="language-jsx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">declare</span> <span class="kd">const</span> <span class="nx">canvas_width</span><span class="p">:</span> <span class="nx">i32</span><span class="p">;</span>
+<span class="nx">declare</span> <span class="kd">const</span> <span class="nx">canvas_height</span><span class="p">:</span> <span class="nx">i32</span><span class="p">;</span>
+<span class="nx">declare</span> <span class="kd">const</span> <span class="nx">ITER_CONST</span><span class="p">:</span> <span class="nx">i16</span><span class="p">;</span>
+<span class="nx">declare</span> <span class="kd">const</span> <span class="nx">START_X_TOTAL</span><span class="p">:</span><span class="nx">f32</span>
+<span class="nx">declare</span> <span class="kd">const</span> <span class="nx">START_Y_TOTAL</span><span class="p">:</span><span class="nx">f32</span>
+<span class="nx">declare</span> <span class="kd">const</span> <span class="nx">WINDOW</span><span class="p">:</span><span class="nx">f32</span>
+
+<span class="p">@</span><span class="nd">unmanaged</span>
+<span class="kd">class</span> <span class="nx">Complex</span> <span class="p">{</span>
+	<span class="nl">real</span><span class="p">:</span> <span class="nx">f64</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+	<span class="nl">imag</span><span class="p">:</span> <span class="nx">f64</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+	<span class="kd">constructor</span><span class="p">(</span><span class="nx">real</span><span class="p">:</span><span class="nx">f64</span><span class="p">,</span> <span class="nx">imag</span><span class="p">:</span><span class="nx">f64</span><span class="p">){</span>
+		<span class="k">this</span><span class="p">.</span><span class="nx">real</span> <span class="o">=</span> <span class="nx">real</span><span class="p">;</span>
+		<span class="k">this</span><span class="p">.</span><span class="nx">imag</span> <span class="o">=</span> <span class="nx">imag</span><span class="p">;</span>
+	<span class="p">}</span>
+
+	<span class="p">@</span><span class="nd">inline</span>
+	<span class="nx">add</span><span class="p">(</span><span class="nx">cplx</span><span class="p">:</span> <span class="nx">Complex</span><span class="p">):</span> <span class="nx">Complex</span> <span class="p">{</span>
+		<span class="k">this</span><span class="p">.</span><span class="nx">real</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">real</span> <span class="o">+</span> <span class="nx">cplx</span><span class="p">.</span><span class="nx">real</span><span class="p">;</span>
+		<span class="k">this</span><span class="p">.</span><span class="nx">imag</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">imag</span> <span class="o">+</span> <span class="nx">cplx</span><span class="p">.</span><span class="nx">imag</span><span class="p">;</span>
+		<span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+	<span class="p">}</span>
+
+	<span class="p">@</span><span class="nd">inline</span>
+	<span class="nx">mag</span><span class="p">():</span> <span class="nx">f64</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">sqrt</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">real</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">real</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">imag</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">imag</span><span class="p">)</span>
+	<span class="p">}</span>
+
+	<span class="p">@</span><span class="nd">inline</span>
+	<span class="nx">mul</span><span class="p">(</span><span class="nx">cplx</span><span class="p">:</span> <span class="nx">Complex</span><span class="p">):</span> <span class="nx">Complex</span> <span class="p">{</span>
+		<span class="kd">const</span> <span class="nx">__tempr</span>  <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">real</span><span class="o">*</span><span class="nx">cplx</span><span class="p">.</span><span class="nx">real</span> <span class="o">-</span> <span class="k">this</span><span class="p">.</span><span class="nx">imag</span><span class="o">*</span><span class="nx">cplx</span><span class="p">.</span><span class="nx">imag</span><span class="p">;</span>
+		<span class="kd">const</span> <span class="nx">__tempi</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">imag</span><span class="o">*</span><span class="nx">cplx</span><span class="p">.</span><span class="nx">real</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">real</span><span class="o">*</span><span class="nx">cplx</span><span class="p">.</span><span class="nx">imag</span><span class="p">;</span>
+		<span class="k">this</span><span class="p">.</span><span class="nx">real</span> <span class="o">=</span> <span class="nx">__tempr</span><span class="p">;</span>
+		<span class="k">this</span><span class="p">.</span><span class="nx">imag</span> <span class="o">=</span> <span class="nx">__tempi</span><span class="p">;</span>
+		<span class="k">return</span> <span class="k">this</span>
+	<span class="p">}</span>
+
+	<span class="kd">set</span><span class="p">(</span><span class="nx">real</span><span class="p">:</span><span class="nx">f64</span><span class="p">,</span><span class="nx">imag</span><span class="p">:</span><span class="nx">f64</span><span class="p">):</span> <span class="k">void</span> <span class="p">{</span>
+		<span class="k">this</span><span class="p">.</span><span class="nx">real</span> <span class="o">=</span> <span class="nx">real</span><span class="p">;</span>
+		<span class="k">this</span><span class="p">.</span><span class="nx">imag</span> <span class="o">=</span> <span class="nx">imag</span><span class="p">;</span>
+	<span class="p">}</span>
+
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">z</span><span class="p">:</span><span class="nx">Complex</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Complex</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">cplx</span><span class="p">:</span><span class="nx">Complex</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Complex</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="p">@</span><span class="nd">inline</span>
+<span class="kd">function</span> <span class="nx">mandelbrot</span><span class="p">(</span><span class="nx">real</span><span class="p">:</span><span class="nx">f64</span><span class="p">,</span><span class="nx">imag</span><span class="p">:</span><span class="nx">f64</span><span class="p">):</span><span class="nx">i16</span><span class="p">{</span>
+	<span class="nx">z</span><span class="p">.</span><span class="kd">set</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+	<span class="nx">cplx</span><span class="p">.</span><span class="kd">set</span><span class="p">(</span><span class="nx">real</span><span class="p">,</span><span class="nx">imag</span><span class="p">)</span>
+
+	<span class="kd">let</span> <span class="nx">count</span><span class="p">:</span><span class="nx">i16</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+	<span class="k">for</span> <span class="p">(;</span> <span class="nx">z</span><span class="p">.</span><span class="nx">mag</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="mi">2</span><span class="p">;</span> <span class="nx">count</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+		<span class="p">(</span><span class="nx">z</span><span class="p">.</span><span class="nx">mul</span><span class="p">(</span><span class="nx">z</span><span class="p">)).</span><span class="nx">add</span><span class="p">(</span><span class="nx">cplx</span><span class="p">);</span> <span class="c1">// z = z^2 + cplx</span>
+		<span class="k">if</span> <span class="p">(</span><span class="nx">count</span> <span class="o">&gt;</span> <span class="nx">ITER_CONST</span><span class="p">)</span> <span class="p">{</span>
+			<span class="k">break</span><span class="p">;</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="nx">count</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="cm">/*
+stores array of i16s at start of memory 
+corresponding to escape count at pixels in
+array
+*/</span>
+<span class="k">export</span> <span class="kd">function</span> <span class="nx">compute</span><span class="p">():</span> <span class="k">void</span> <span class="p">{</span>
+	<span class="kd">let</span> <span class="nx">memcounter</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="kd">const</span> <span class="na">step_X</span><span class="p">:</span><span class="nx">f32</span> <span class="o">=</span> <span class="nx">WINDOW</span><span class="o">/</span><span class="nx">f32</span><span class="p">(</span><span class="nx">canvas_width</span><span class="p">);</span>
+	<span class="kd">const</span> <span class="na">step_Y</span><span class="p">:</span><span class="nx">f32</span> <span class="o">=</span> <span class="nx">WINDOW</span><span class="o">/</span><span class="nx">f32</span><span class="p">(</span><span class="nx">canvas_height</span><span class="p">);</span>
+	<span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">y</span> <span class="o">=</span> <span class="nx">START_Y_TOTAL</span><span class="p">,</span> <span class="nx">count_y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">count_y</span> <span class="o">&lt;</span> <span class="nx">canvas_height</span><span class="p">;</span> <span class="nx">y</span> <span class="o">+=</span> <span class="nx">step_Y</span><span class="p">,</span> <span class="nx">count_y</span><span class="o">++</span><span class="p">){</span>
+		<span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">x</span> <span class="o">=</span> <span class="nx">START_X_TOTAL</span><span class="p">,</span> <span class="nx">count_x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">count_x</span> <span class="o">&lt;</span> <span class="nx">canvas_width</span><span class="p">;</span> <span class="nx">x</span> <span class="o">+=</span> <span class="nx">step_X</span><span class="p">,</span> <span class="nx">count_x</span><span class="o">++</span><span class="p">){</span>
+			<span class="nx">store</span><span class="o">&lt;</span><span class="nx">i16</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">memcounter</span><span class="p">,</span> <span class="nx">mandelbrot</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span><span class="nx">y</span><span class="p">));</span>
+			<span class="nx">memcounter</span> <span class="o">+=</span> <span class="mi">2</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>The only really noteworthy change was to not have <code>new</code> in the hot loop. The Assemblyscript garbage collector had some trouble with it and total allocation would exceed WebAssembly's 100  page memory limit[1]. I suspect that sort of code will be usable once the WebAssembly GC proposals, which allow wasm modules to hook into the browser's GC, are implemented.</p>
+<h3 id="threading">Threading</h3>
+<p>The fastest way to thread code in browsers is to use <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer">SharedArrayBuffer</a>, this also requires the following CORS headers.</p>
+<div class="language-jsx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">Cross</span><span class="o">-</span><span class="nx">Origin</span><span class="o">-</span><span class="nx">Opener</span><span class="o">-</span><span class="nx">Policy</span><span class="p">:</span> <span class="nx">same</span><span class="o">-</span><span class="nx">origin</span>
+<span class="nx">Cross</span><span class="o">-</span><span class="nx">Origin</span><span class="o">-</span><span class="nx">Embedder</span><span class="o">-</span><span class="nx">Policy</span><span class="p">:</span> <span class="nx">require</span><span class="o">-</span><span class="nx">corp</span>
+</code></pre></div></div>
+<p>This is to ensure cross-origin isolation, which protects against memory being exfiltrated somehow (I might explore this in the future, but that's about all I know for the moment.) WebAssembly memories can also be created with a backing SharedArrayBuffer (Link to explanation), which allows fast multithreading, as separate web-workers can run the same Webassembly module and write their results to the same memory, meaning that large objects don't need to be passed around using postmessage, and the many O(N) overheads to do with copying and creating new arrays can be avoided.</p>
+<p>However, while Assemblyscript <a href="https://www.assemblyscript.org/stdlib/builtins.html#atomics-%F0%9F%A6%84">allows</a> access to atomic instructions, it does not implement any sort of locking. So any program that reads and writes to memory will need to be adjusted to thread with shared memory. This means that the program seen above, with its Complex class and set calls reading and writing to the linear memory quite often, is very prone to... interesting behaviour when threaded.</p>
+<p><img src="//assets/1-MandelbrotNoise.png" alt="Noisey Mandelbrot" /></p>
+<p>Exhibit A of nondeterministic behavior</p>
+<p>That being said, for small examples such as fractal calculation, its quite easy to limit mutability to local variables (which are on the stack, not in the linear memory, and so are not shared) and avoid the problem entirely. Like in the following code:</p>
+<div class="language-jsx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">@</span><span class="nd">inline</span>
+<span class="kd">function</span> <span class="nx">mandelbrot</span><span class="p">(</span><span class="nx">c_r</span><span class="p">:</span><span class="nx">f64</span><span class="p">,</span> <span class="nx">c_i</span><span class="p">:</span><span class="nx">f64</span><span class="p">):</span><span class="nx">i16</span><span class="p">{</span>
+	<span class="kd">let</span> <span class="nx">count</span><span class="p">:</span><span class="nx">i16</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+	<span class="kd">let</span> <span class="nx">z_r</span><span class="p">:</span><span class="nx">f64</span> <span class="o">=</span> <span class="mi">0</span><span class="p">.,</span> <span class="nx">z_i</span><span class="p">:</span><span class="nx">f64</span> <span class="o">=</span> <span class="mi">0</span><span class="p">.,</span> <span class="nx">t_r</span><span class="p">:</span><span class="nx">f64</span> <span class="o">=</span> <span class="mi">0</span><span class="p">.,</span> <span class="nx">t_i</span><span class="p">:</span><span class="nx">f64</span> <span class="o">=</span> <span class="mi">0</span><span class="p">.;</span>
+	<span class="k">for</span><span class="p">(;</span> <span class="nx">z_r</span><span class="o">*</span><span class="nx">z_r</span> <span class="o">+</span> <span class="nx">z_i</span><span class="o">*</span><span class="nx">z_i</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">;</span> <span class="nx">count</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+		<span class="nx">t_r</span> <span class="o">=</span> <span class="nx">z_r</span><span class="o">*</span><span class="nx">z_r</span> <span class="o">-</span> <span class="nx">z_i</span><span class="o">*</span><span class="nx">z_i</span> <span class="o">+</span> <span class="nx">c_r</span><span class="p">;</span>
+		<span class="nx">t_i</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="nx">z_i</span><span class="o">*</span><span class="nx">z_r</span> <span class="o">+</span> <span class="nx">c_i</span><span class="p">;</span>
+		<span class="nx">z_r</span> <span class="o">=</span> <span class="nx">t_r</span><span class="p">;</span>
+		<span class="nx">z_i</span> <span class="o">=</span> <span class="nx">t_i</span><span class="p">;</span>
+		<span class="k">if</span><span class="p">(</span><span class="nx">count</span> <span class="o">&gt;</span> <span class="nx">ITER_CONST</span><span class="p">)</span> <span class="p">{</span>
+			<span class="k">break</span><span class="p">;</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="nx">count</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="cm">/*
+stores array of i16s at start of memory 
+corresponding to escape count at pixels in
+array
+*/</span>
+<span class="k">export</span> <span class="kd">function</span> <span class="nx">compute</span><span class="p">():</span><span class="k">void</span> <span class="p">{</span>
+	<span class="kd">let</span> <span class="nx">memcounter</span> <span class="o">=</span> <span class="mi">0</span>
+	<span class="kd">const</span> <span class="na">step_X</span><span class="p">:</span><span class="nx">f32</span> <span class="o">=</span> <span class="nx">WINDOW</span><span class="o">/</span><span class="nx">f32</span><span class="p">(</span><span class="nx">canvas_width</span><span class="p">);</span>
+	<span class="kd">const</span> <span class="na">step_Y</span><span class="p">:</span><span class="nx">f32</span> <span class="o">=</span> <span class="nx">WINDOW</span><span class="o">/</span><span class="nx">f32</span><span class="p">(</span><span class="nx">canvas_height</span><span class="p">);</span>
+	<span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">y</span> <span class="o">=</span> <span class="nx">START_Y_TOTAL</span><span class="p">,</span> <span class="nx">count_y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">count_y</span> <span class="o">&lt;</span> <span class="nx">canvas_height</span><span class="p">;</span> <span class="nx">y</span> <span class="o">+=</span> <span class="nx">step_Y</span><span class="p">,</span> <span class="nx">count_y</span><span class="o">++</span><span class="p">){</span>
+		<span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">x</span> <span class="o">=</span> <span class="nx">START_X_TOTAL</span><span class="p">,</span> <span class="nx">count_x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">count_x</span> <span class="o">&lt;</span> <span class="nx">canvas_width</span><span class="p">;</span> <span class="nx">x</span> <span class="o">+=</span> <span class="nx">step_X</span><span class="p">,</span> <span class="nx">count_x</span><span class="o">++</span><span class="p">){</span>
+			<span class="nx">store</span><span class="o">&lt;</span><span class="nx">i16</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">memcounter</span><span class="p">,</span> <span class="nx">mandelbrot</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span><span class="nx">y</span><span class="p">));</span>
+			<span class="nx">memcounter</span> <span class="o">+=</span> <span class="mi">2</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p><em>note that the store instruction there might look like it would cause issues, but as long as threads work on different parts of the image, that should not be a problem.</em></p>
+<h3 id="simd">SIMD</h3>
+<p>SIMD (Single Instruction Multiple Data) instructions are special instructions on the CPU that allow multiple additions, multiplications etc to be carried out in parallel on the same core)</p>
+<p><img src="https://upload.wikimedia.org/wikipedia/commons/c/ce/SIMD2.svg" alt="SIMD Explaination" /></p>
+<p>By Vadikus - Own work, CC BY-SA 4.0, <a href="https://commons.wikimedia.org/w/index.php?curid=39715273">https://commons.wikimedia.org/w/index.php?curid=39715273</a></p>
+<p>They're not in the webassembly spec as yet, but should be <a href="https://webassembly.github.io/simd/core/exec/instructions.html#simd-instructions">soon</a>, and are currently available on chrome and firefox (although not on ARM in firefox 89, ie. apple M1.) Assemblyscript does not autovectorize code, but <a href="https://www.assemblyscript.org/stdlib/builtins.html#simd-%F0%9F%A6%84">allows</a> access to the instructions, and provides some sugar for different types and functions to initialise constant vectors.</p>
+<p>The vector size in the proposal is 128 bit, which is a decent compromise and is backed by hardware instructions on most modern computers. In the future, <a href="https://github.com/WebAssembly/flexible-vectors">flexible vectors</a>, should be able to allow access to 256, 512 bit vectors that modern intel and AMD CPUs support (consumer ARM chips currently only have 128 bit vectors, as far as I'm aware, although <a href="https://en.wikipedia.org/wiki/AArch64#Scalable_Vector_Extension_(SVE)">supercomputer ARM chips do have 512 bit vectors</a>.)</p>
+<p>Vectorizing the mandelbrot code above is not too bad, althought it does look rather messy:</p>
+<div class="language-jsx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">@</span><span class="nd">inline</span>
+<span class="kd">function</span> <span class="nx">mandelbrot_simd</span><span class="p">(</span><span class="nx">c_rl</span><span class="p">:</span><span class="nx">v128</span><span class="p">,</span><span class="nx">c_il</span><span class="p">:</span><span class="nx">v128</span><span class="p">):</span><span class="nx">v128</span><span class="p">{</span>
+    <span class="kd">let</span> <span class="nx">in_set</span> <span class="p">:</span> <span class="nx">v128</span> <span class="o">=</span> <span class="nx">i32x4</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+    <span class="kd">let</span> <span class="nx">z_r</span> <span class="p">:</span> <span class="nx">v128</span> <span class="o">=</span> <span class="nx">f32x4</span><span class="p">(</span><span class="mi">0</span><span class="p">.,</span><span class="mi">0</span><span class="p">.,</span><span class="mi">0</span><span class="p">.,</span><span class="mi">0</span><span class="p">.);</span>
+    <span class="kd">let</span> <span class="nx">z_i</span> <span class="p">:</span> <span class="nx">v128</span> <span class="o">=</span> <span class="nx">f32x4</span><span class="p">(</span><span class="mi">0</span><span class="p">.,</span><span class="mi">0</span><span class="p">.,</span><span class="mi">0</span><span class="p">.,</span><span class="mi">0</span><span class="p">.);</span>
+    <span class="kd">let</span> <span class="nx">t_r</span> <span class="p">:</span> <span class="nx">v128</span> <span class="o">=</span> <span class="nx">f32x4</span><span class="p">(</span><span class="mi">0</span><span class="p">.,</span><span class="mi">0</span><span class="p">.,</span><span class="mi">0</span><span class="p">.,</span><span class="mi">0</span><span class="p">.);</span>
+    <span class="kd">let</span> <span class="nx">t_i</span> <span class="p">:</span> <span class="nx">v128</span> <span class="o">=</span> <span class="nx">f32x4</span><span class="p">(</span><span class="mi">0</span><span class="p">.,</span><span class="mi">0</span><span class="p">.,</span><span class="mi">0</span><span class="p">.,</span><span class="mi">0</span><span class="p">.);</span>
+    <span class="kd">const</span> <span class="nx">ones</span> <span class="o">=</span> <span class="nx">i32x4</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="kd">const</span> <span class="nx">fours</span> <span class="o">=</span> <span class="nx">f32x4</span><span class="p">(</span><span class="mi">4</span><span class="p">.,</span><span class="mi">4</span><span class="p">.,</span><span class="mi">4</span><span class="p">.,</span><span class="mi">4</span><span class="p">.)</span>
+    <span class="kd">const</span> <span class="nx">ITER_CONSTS</span><span class="p">:</span><span class="nx">v128</span> <span class="o">=</span> <span class="nx">v128</span><span class="p">.</span><span class="nx">splat</span><span class="o">&lt;</span><span class="nx">i32</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">ITER_CONST</span><span class="p">);</span>
+    <span class="kd">let</span> <span class="nx">count</span><span class="p">:</span><span class="nx">v128</span><span class="o">=</span><span class="nx">i32x4</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">for</span><span class="p">(</span>
+        <span class="kd">let</span> <span class="nx">total_count</span><span class="p">:</span><span class="nx">i32</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">any_in_convergence_region</span><span class="p">:</span><span class="nx">boolean</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+        <span class="nx">any_in_convergence_region</span> <span class="o">&amp;&amp;</span>
+        <span class="nx">total_count</span> <span class="o">&lt;</span> <span class="nx">ITER_CONST</span><span class="p">;</span>
+        <span class="nx">total_count</span><span class="o">++</span><span class="p">;</span>
+    <span class="p">)</span> <span class="p">{</span>
+        <span class="nx">z_i</span> <span class="o">=</span> <span class="nx">v128</span><span class="p">.</span><span class="nx">add</span><span class="o">&lt;</span><span class="nx">f32</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">c_il</span><span class="p">,</span> <span class="nx">v128</span><span class="p">.</span><span class="nx">mul</span><span class="o">&lt;</span><span class="nx">f32</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">v128</span><span class="p">.</span><span class="nx">add</span><span class="o">&lt;</span><span class="nx">f32</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">z_r</span><span class="p">,</span><span class="nx">z_r</span><span class="p">),</span><span class="nx">z_i</span><span class="p">));</span>
+        <span class="nx">z_r</span> <span class="o">=</span> <span class="nx">v128</span><span class="p">.</span><span class="nx">add</span><span class="o">&lt;</span><span class="nx">f32</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">c_rl</span><span class="p">,</span> <span class="nx">v128</span><span class="p">.</span><span class="nx">sub</span><span class="o">&lt;</span><span class="nx">f32</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">t_r</span><span class="p">,</span><span class="nx">t_i</span><span class="p">));</span>
+        <span class="nx">t_r</span> <span class="o">=</span> <span class="nx">v128</span><span class="p">.</span><span class="nx">mul</span><span class="o">&lt;</span><span class="nx">f32</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">z_r</span><span class="p">,</span><span class="nx">z_r</span><span class="p">);</span>
+        <span class="nx">t_i</span> <span class="o">=</span> <span class="nx">v128</span><span class="p">.</span><span class="nx">mul</span><span class="o">&lt;</span><span class="nx">f32</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">z_i</span><span class="p">,</span><span class="nx">z_i</span><span class="p">);</span>
+        <span class="kd">const</span> <span class="nx">mask</span> <span class="o">=</span> <span class="nx">v128</span><span class="p">.</span><span class="nx">le</span><span class="o">&lt;</span><span class="nx">f32</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">v128</span><span class="p">.</span><span class="nx">add</span><span class="o">&lt;</span><span class="nx">f32</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">t_r</span><span class="p">,</span><span class="nx">t_i</span><span class="p">),</span><span class="nx">fours</span><span class="p">);</span>
+        <span class="nx">any_in_convergence_region</span> <span class="o">=</span> <span class="nx">v128</span><span class="p">.</span><span class="nx">any_true</span><span class="p">(</span><span class="nx">mask</span><span class="p">);</span>
+        <span class="nx">count</span> <span class="o">=</span> <span class="nx">v128</span><span class="p">.</span><span class="nx">add</span><span class="o">&lt;</span><span class="nx">i32</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">count</span><span class="p">,</span> <span class="nx">v128</span><span class="p">.</span><span class="nx">and</span><span class="p">(</span><span class="nx">ones</span><span class="p">,</span><span class="nx">mask</span><span class="p">));</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nx">count</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>This should basically be a 4x speedup over the previous code, when run single threaded. Multithreaded, that number will vary depending on how threads are allocated, as work only gets completed as fast as the slowest thread.</p>
+<h3 id="compiler-flags">Compiler Flags</h3>
+<p>For the examples above, some memory is reserved for the purposes of storing the image, in assemblyscript this is achieved by passing the <code>--memoryBase</code> flag to the <code>asc</code> compiler (as seen in the makefile below)</p>
+<p>The other flags are tuned for maximum performance (thanks to <a href="https://github.com/MaxGraey">Max Graey</a> for -O3 instead of -O3s/z) and to enable necessary features (threads, SIMD.)</p>
+<div class="language-makefile highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">MEMORY_FLAGS</span> <span class="o">=</span> <span class="nt">--maximumMemory</span> 80 <span class="nt">--importMemory</span> <span class="nt">--noExportMemory</span> <span class="nt">--initialMemory</span> 80 <span class="nt">--memoryBase</span> 4000000
+<span class="nv">OPTIMIZATION_FLAGS</span> <span class="o">=</span> <span class="nt">-O3</span> <span class="nt">--converge</span>
+<span class="nv">DEBUG_FLAGS</span> <span class="o">=</span> <span class="nt">--sourceMap</span>
+<span class="nv">FEATURE_FLAGS</span> <span class="o">=</span> <span class="nt">--enable</span> simd <span class="nt">--enable</span> threads
+<span class="nv">RUNTIME_FLAGS</span> <span class="o">=</span> <span class="nt">--runtime</span> stub
+<span class="nl">start</span><span class="o">:</span> <span class="nf">install</span>
+	npx asc assembly/mandel_final.ts <span class="nt">-b</span> build/mandel_final.wasm <span class="nt">-t</span> build/mandel_final.wat <span class="nv">$(OPTIMIZATION_FLAGS)</span> <span class="nv">$(MEMORY_FLAGS)</span> <span class="nv">$(FEATURE_FLAGS)</span> <span class="nv">$(RUNTIME_FLAGS)</span> <span class="nv">$(DEBUG_FLAGS)</span>
+
+<span class="nl">install</span><span class="o">:</span>
+	npm i 
+</code></pre></div></div>
+<h3 id="multithreaded-simd-speed">MULTITHREADED SIMD SPEED</h3>
+<p>Benchmark results will be discussed near the end of this article, but the speed of the multithreaded SIMD code is quite astonishing, roughly 3x the speed of multithreaded JS using sharedarraybuffers, and I'm guessing that's held back by module message passing overheads. <a href="https://mandelbrot-ascript.vercel.app/">HERE</a> is a basic mandelbrot zoom implementation using it (only works in firefox(≥90 on apple m1) and chrome, <a href="https://github.com/pretentious7/mandelbrot-ascript">here's</a> the github repo.) I'll be working in boundary estimation and period checking along with xaos zoom algorithm into it in a couple of months, so stay tuned for that!</p>
+<p>I'm also fairly certain that this is the first(?) SIMD mandelbrot implementation for webassembly, so if anyone wants to use it for anything (under the terms of the GPLv3 License) feel free!</p>
+<p><em>[1] A page being 64KiB (65,536 bytes), so about 6.5 mb max memory</em></p>
+</details>
+<br>
+<hr />
+<br>
+<h2 id="results">Results</h2>
+<p>First, we know that our benchmarks here are not rigorous in the slightest. Their purpose was to give us an idea of the rough performance capabilities of the tools we're working with, to help inform our choices as we port certain programs (stay tuned!) to WebAssembly. We will be refining this tool in the future, and hope to have (somehow) bytecode outputs and flamegraphs on the site.</p>
+<table>
+<thead>
+<tr>
+<th>Benchmark</th>
+<th>Firefox 89(ms)</th>
+<th>Chrome 91 (ms)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Naive-js</td>
+<td>2992</td>
+<td>631</td>
+</tr>
+<tr>
+<td>Improved-js</td>
+<td>1755</td>
+<td>292</td>
+</tr>
+<tr>
+<td>Multithreaded-js</td>
+<td>705</td>
+<td>129</td>
+</tr>
+<tr>
+<td>Singlethreaded-Rust</td>
+<td>890</td>
+<td>745</td>
+</tr>
+<tr>
+<td>Optimized non-SIMD AssemblyScript</td>
+<td>250</td>
+<td>262</td>
+</tr>
+<tr>
+<td>Optimized SIMD AssemblyScript</td>
+<td>124</td>
+<td>108</td>
+</tr>
+<tr>
+<td>SIMD Multithreaded AssemblyScript</td>
+<td>43</td>
+<td>43</td>
+</tr>
+</tbody>
+</table>
+<p><em>All numbers approximate, gathered from fresh browser session after reboot on an HP Envy 13 with an i5-8265U CPU @ 1.60GHz and 8gb of RAM running Ubuntu 20.04.2 with kernel 5.8.0. Average of 5 runs (first 2 runs dropped)</em></p>
+<p>The results of our benchmark (at least approximately) line up with what one would expect, but we find a few items of interest. First, as far as the javascript implementations are concerned, Firefox is <em>significantly</em> slower than chrome. Second, WebAssembly speeds are comparable for both browsers.</p>
+<p>The performance advantage of WebAssembly (without SIMD) over javascript for this benchmark is basically negligible for chrome. In a future article it'll be interesting to see whether the bytecode generated is also similar.</p>
+<p>But the key insight here is clear, WebAssembly offers <em>predictable</em> performance, across browser engines. We'll be adding fallbacks for safari later to see if this holds there as well. Further, we'll compare the results to native code.</p>
+<p>*<em>The rust code can likely be sped up with some optimizations here and there, but for a rough effort from a novice rust programmer, this is representative.</em></p>
+<p>See the demo <a href="https://js-wasm-mandelbrot-benchmark-3.vercel.app/">here</a>.</p>
+<br>
+<h2 id="final-thoughts">Final Thoughts</h2>
+<p>As tools of application distribution, browsers have some undeniable advantages over the traditional pipeline of download → extract onto disk → load from disk for execution. For most programs, it is technically unnecessary to have <em>all</em> of their assets present to be able to enjoy some subset of their capabilities. Of course, adding such partial update capabilities is non-trivial, and would add significant complexity. But web developers and browser vendors have made a lot of progress in enabling this essentially by default, and with webassembly, enabling it in areas where it's not previously been feasible.</p>
+<p>Further, cloud offloading enables users to easily sustain state across devices and in some cases avoid calculation heavy code in the interests of battery life or smooth performance. The easiest way to realize these advantages is to distribute one's application in an environment that does this <em>by default</em>: the browser. But a prerequisite for this is that the experience is not overly hampered by being in the browser, and bringing webassembly to near native performance is a key part of that.</p>
+<p>There is an opportunity here to allow people to access performance heavy applications like games and simulations on their devices without having to get into the nasty business of managing local state on their devices, which accounts for what, 99% of problems installing and using software? We want to help build this, and over the next few weeks, will be releasing demos to show what it might look like, so stay tuned!</p>
+<p><em>Of course, the possible bad end here is that the canvas ends up as an inefficient GUI toolkit to have fungible programmers at the cost of user experience, we hope that doesn't happen.</em></p>
+<br>
+<h2 id="further-reading">Further Reading:</h2>
+<p>David Beazley. (2019). A Talk Near the Future of Python (a.k.a., Dave live-codes a WebAssembly Interpreter). <a href="https://www.youtube.com/watch?v=r-A78RgMhZU">https://www.youtube.com/watch?v=r-A78RgMhZU</a></p>
+<p>Firefox’s low-latency webassembly compiler – wingolog. (n.d.). Retrieved June 19, 2021, from <a href="https://wingolog.org/archives/2020/03/25/firefoxs-low-latency-webassembly-compiler">https://wingolog.org/archives/2020/03/25/firefoxs-low-latency-webassembly-compiler</a></p>
+<p>firefox’s low-latency webassembly compiler—Wingolog. (n.d.). Retrieved June 19, 2021, from <a href="https://wingolog.org/archives/2020/03/25/firefoxs-low-latency-webassembly-compiler">https://wingolog.org/archives/2020/03/25/firefoxs-low-latency-webassembly-compiler</a></p>
+<p>Pereira, F. M. Q., &amp; Palsberg, J. (2006). Register Allocation After Classical SSA Elimination is NP-Complete. In L. Aceto &amp; A. Ingólfsdóttir (Eds.), Foundations of Software Science and Computation Structures (Vol. 3921, pp. 79–93). Springer Berlin Heidelberg. <a href="https://doi.org/10.1007/11690634_6">https://doi.org/10.1007/11690634_6</a></p>
+<p>WebAssembly. (n.d.). Retrieved June 19, 2021, from <a href="https://webassembly.org/">https://webassembly.org/</a></p>
+<p>WebAssembly compilation pipeline · V8. (n.d.). Retrieved June 19, 2021, from <a href="https://v8.dev/docs/wasm-compilation-pipeline">https://v8.dev/docs/wasm-compilation-pipeline</a></p>
+
+  </div><a class="u-url" href="/jekyll/update/2021/06/21/WasmPerformance.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+    <data class="u-url" href="/"></data>
+  
+    <div class="wrapper">
+  
+      <div class="footer-col-wrapper">
+        <div class="footer-col">
+        </div>
+      </div>
+  
+      <div class="social-links"><ul class="social-media-list"><li><a href="https://github.com/AO-Design-Inc"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">AO-Design-Inc</span></a></li><li><a href="https://www.twitter.com/OjasinKirpane"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">OjasinKirpane</span></a></li></ul>
+</div>
+  
+    </div>
+  
+  </footer><script>
+    
+    var elements = document.querySelectorAll('p');
+    Array.prototype.forEach.call(elements, function(el, i){
+        if(el.innerHTML=='[expand]') {
+            var parentcontent = el.parentNode.innerHTML.replace('<p>[expand]</p>','<div class="expand" style="display: none; height: 0; overflow: hidden;">').replace('<p>[/expand]</p>','</div>');
+            el.parentNode.innerHTML = parentcontent;
+        }
+    });
+
+    var elements = document.querySelectorAll('div.expand');
+    Array.prototype.forEach.call(elements, function(el, i){
+        el.previousElementSibling.innerHTML = el.previousElementSibling.innerHTML + '<span>..&nbsp; <a href="#" style="cursor: pointer;" onclick="this.parentNode.parentNode.nextElementSibling.style.display = \'block\'; this.parentNode.parentNode.nextElementSibling.style.height = \'auto\'; this.parentNode.style.display = \'none\';">read&nbsp;more&nbsp;&rarr;</a></span>';
+    });
+
+</script>
+
+  </body>
+
+</html>
