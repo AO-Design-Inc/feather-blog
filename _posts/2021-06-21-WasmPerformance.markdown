@@ -1,8 +1,11 @@
 ---
 layout: post
-title:  "How We Made One of the Fastest Mandelbrot Renderer on the Web."
+title:  "How We Made One of the Fastest Mandelbrot Renderers on the Web."
+katex: true
 date:   2021-06-21 11:10:02 -0500
 author: "Ojasvin Kirpane, Abhishek Cherath, Jo Gao & Abhinuv Allu"
+redirect_from: "/jekyll/update/2021/06/21/WasmPerformance.html"
+permalink: mandelbrot
 categories: jekyll update
 ---
 ![Mandelbrot]({{site.baseurl}}/assets/1-Thumbnail-Mandelbrot.png)
@@ -11,7 +14,7 @@ categories: jekyll update
 
 Hey, welcome to the Feather Systems blog. This is the first post of many, documenting our journey towards creating simpler systems for better performance on the web. 
 
-This post will document our initial experiments rendering the Mandelbrot set with JavaScript, Web-workers & emerging web technologies like WebAssembly.  You can access the project [here](https://js-wasm-mandelbrot-benchmark-3.vercel.app/) and view the code [here](https://github.com/AO-Design-Inc/js-wasm-mandelbrot-benchmark).
+This post will document our initial experiments rendering the Mandelbrot set with JavaScript, Web-workers & emerging web technologies like webassembly.  You can access the project [here](https://js-wasm-mandelbrot-benchmark-3.vercel.app/) and view the code [here](https://github.com/AO-Design-Inc/js-wasm-mandelbrot-benchmark).
 
 These experiments were tested and measured by the team to properly document each technology's advantages & disadvantages. 
 
@@ -19,7 +22,7 @@ To elucidate, let's start with fractals & the mandelbrot set:
 
 ## The Mandelbrot Set
 
-The Mandelbrot Set is defined as the set of complex numbers for which the function ${ z_{n+1}=z_{n}^{2}+c }$ does not diverge when $z_{0} = 0$. An image of how the Mandelbrot set looks as follows. Points shaded black are in the set. We are using the Mandelbrot set to benchmark our code.
+The Mandelbrot Set is defined as the set of complex numbers for which the function ![formula](https://render.githubusercontent.com/render/math?math=z_{n%2B1}=z_{n}^{2}%2Bc)  does not diverge when ![formula](https://render.githubusercontent.com/render/math?math=z_{0}=0). An image of how the Mandelbrot set looks as follows. Points shaded black are in the set. We are using the Mandelbrot set to benchmark our code.
 
 ![Mandelbrot Render]({{site.baseurl}}/assets/1-MandelbrotRender.png)
 
@@ -69,8 +72,6 @@ As of when this article was published, the following versions are available on t
 </details>
 
 <br>
-
------
 
 <br>
 
@@ -245,38 +246,36 @@ These changes made the code perform a lot better. You can check out it's perform
 
 <br>
 
------
-
 <br>
 
-## So, What is WebAssembly? *by Abhishek Cherath*
+## So, What is Webassembly? *by Abhishek Cherath*
 <details>
 <summary>Click to Read</summary>
 
 In our quest to further optimize performance, we used webassembly, an emerging web technology optimized for what we are trying to achieve. So, what is it?
-Insofar as an overview is concerned, nothing beats Lin Clark's cartoon intro [here](https://hacks.mozilla.org/2017/02/a-cartoon-intro-to-webassembly/), and the MDN docs [here](https://developer.mozilla.org/en-US/docs/WebAssembly). Put simply, webAssembly is a low level typed language that targets the browser's VM. For some reasons[1] , it's very quick and easy to compile into decently fast machine code.
+Insofar as an overview is concerned, nothing beats Lin Clark's cartoon intro [here](https://hacks.mozilla.org/2017/02/a-cartoon-intro-to-webassembly/), and the MDN docs [here](https://developer.mozilla.org/en-US/docs/WebAssembly). Put simply, webassembly is a low level typed language that targets the browser's VM. For some reasons[1] , it's very quick and easy to compile into decently fast machine code.
 
 Fundamentally, the language was designed to offer the best possible latency (time to execution) and speed of execution. Low latency is achieved by having a small binary representation (vs javascript's textual representation) and having type definitions and a function table at the start of a .wasm module, which allows compilers to compile in a streaming fashion, instead of needing to have access to the entire file before starting. 
 
 Speed of execution requires slow compilation with multiple passes for the compiler to accurately assess the best register allocation, optimize out unnecessary instructions and do whatever other things compilers do. (*note: I have frankly no idea what goes into compiler optimization, I just know it takes time*)
 
-To satisfy both these goals, browsers (atleast Firefox and Chrome) have two compilers for WebAssembly, the first compiles the module as it's called from the network, and is basically instant ([here](https://v8.dev/docs/wasm-compilation-pipeline), chrome devs claim that theirs can do on the order of 10+ mb of code per second, so the bottleneck will almost always be the speed of the network rather than the compiler.) The second does optimization and dynamically replaces the unoptimized bytecode from the first when it's done.
+To satisfy both these goals, browsers (atleast Firefox and Chrome) have two compilers for webassembly, the first compiles the module as it's called from the network, and is basically instant ([here](https://v8.dev/docs/wasm-compilation-pipeline), chrome devs claim that theirs can do on the order of 10+ mb of code per second, so the bottleneck will almost always be the speed of the network rather than the compiler.) The second does optimization and dynamically replaces the unoptimized bytecode from the first when it's done.
 
-It's interesting to note here that, *a priori* there's no reason to expect that webAssembly code for high performance stuff [2] (like fractal calculation) will be any faster than its javascript counterpart. Since the hot loop (calculating escape time) is running many thousands of times, one would expect the javascript JIT compiler to infer the output types and get basically similar bytecode, while amortizing its greater overhead considering workload size.
+It's interesting to note here that, *a priori* there's no reason to expect that webassembly code for high performance stuff [2] (like fractal calculation) will be any faster than its javascript counterpart. Since the hot loop (calculating escape time) is running many thousands of times, one would expect the javascript JIT compiler to infer the output types and get basically similar bytecode, while amortizing its greater overhead considering workload size.
 
 In a later article, I will be examining this conjecture, and taking a deeper look at the flamegraphs and bytecode generated by our benchmarks.
 
-The other interesting thing about WebAssembly is its memory model, programs do not have access to their own instructions and stack machine memory (so no self modifying code, and no messing with values on the stack). What they do have access to is a block of linear memory, which is backed by a javascript ArrayBuffer, and byte addressed (ie. memory[0] is 1 byte long.)
+The other interesting thing about webassembly is its memory model, programs do not have access to their own instructions and stack machine memory (so no self modifying code, and no messing with values on the stack). What they do have access to is a block of linear memory, which is backed by a javascript ArrayBuffer, and byte addressed (ie. memory[0] is 1 byte long.)
 
 *[1]I'm not entirely sure why, but it's some combination of coding for a simple stack machine, having type information, linear memory, and being easy to parse.*
 
-*[2]This is **mostly** true, except for vectorization. SIMD (Single Instruction Multiple Data) instructions are featured in the WebAssembly spec and implemented by chrome and firefox, which do not expose them in js, and have no plans to do so. (although* I *suppose there's nothing stopping a JIT from autovectorizing, is there?)*
+*[2]This is **mostly** true, except for vectorization. SIMD (Single Instruction Multiple Data) instructions are featured in the webassembly spec and implemented by chrome and firefox, which do not expose them in js, and have no plans to do so. (although* I *suppose there's nothing stopping a JIT from autovectorizing, is there?)*
 
 </details>
 
 <br><br>
 
-> **Our Approach to WebAssembly**: As many languages can be compiled to WebAssembly, we looked at two of the most commonly used ones: Rust & AssemblyScript. In the following sections we will describe our approach to these two languages.
+> **Our Approach to webassembly**: As many languages can be compiled to webassembly, we looked at two of the most commonly used ones: Rust & AssemblyScript. In the following sections we will describe our approach to these two languages.
 
 <br><br>
 
@@ -286,7 +285,7 @@ The other interesting thing about WebAssembly is its memory model, programs do n
 
 ### Singlethreaded
 
-I wrote a similar implementation of the function in Rust that would return an ImageData object of the Mandelbrot Set. It uses [wasm-bindgen](https://rustwasm.github.io/wasm-bindgen/), a Rust library that will compile Rust code to webAssembly, and then generate the bindings and glue between JavaScript and webAssembly so that it can be run on the web. It handles all the type conversions between JavaScript and webAssembly and facilitates the compilation of Rust to webAssembly. 
+I wrote a similar implementation of the function in Rust that would return an ImageData object of the Mandelbrot Set. It uses [wasm-bindgen](https://rustwasm.github.io/wasm-bindgen/), a Rust library that will compile Rust code to webassembly, and then generate the bindings and glue between JavaScript and webassembly so that it can be run on the web. It handles all the type conversions between JavaScript and webassembly and facilitates the compilation of Rust to webassembly. 
 
 In the iterative `in_mandelbrot` function, `count` is set to iterate all the way to 1000 for benchmarking purposes. When returning, `count` is set to 255 if larger than 255 to prevent having to cast numbers larger than 255 to u8.
 
@@ -344,7 +343,7 @@ Unfortunately, our Benchmarking Site is structured to use a web worker to call t
 
 This is an infeasible solution because I was unwilling to limit the availability of our benchmark site for this implementation. After many hours of tinkering with the existing setup, I found a workaround that eliminated the need for Webpack altogether: after compiling with wasm-bindgen, I copy and pasted the entire outputted .js file with the import and exports removed, appended the wrapper function I had written to it, and called `init(...)` on the outputted .wasm. 
 
-After confirming that this worked, I wrote a shell script to automatically do this after compilation. Albeit a little unpleasant on the eyes, it does the job:
+After confirming that this worked, A colleague and I  wrote a shell script to automatically do this after compilation. Albeit a little unpleasant on the eyes, it does the job:
 
 ```bash
 sed '/import\W/d;s/^export//g;/default/d' pkg/Mandelbrot.js > tmp_mandel_import.js
@@ -352,7 +351,7 @@ cat tmp_mandel_import.js  mandel_src.js > Mandelbrot.js
 rm tmp_mandel_import.js
 ```
 
-### Rust & WebAssembly Multi-Threaded
+### Rust & Webassembly Multi-Threaded
 
 To further improve performance in Rust, I carried out the same calculations, but in parallel this time. An advantage of the Mandelbrot Set is that determining whether a pixel falls within the set or not can be done completely independently of other pixels. The outcome of each pixel has no effect on the others, making the transition to multithreading straightforward.
 
@@ -365,8 +364,6 @@ This version of the Mandelbrot also makes use of the SharedArrayBuffer, and had 
 
 <br>
 
------
-
 <br>
 
 ## AssemblyScript *by Abhishek Cherath*
@@ -374,7 +371,7 @@ This version of the Mandelbrot also makes use of the SharedArrayBuffer, and had 
 <details>
 <summary>Click to Read</summary>
 
-AssemblyScript compiles a subset of typescript to webassembly. To get an idea of how simple it is to write it, here's essentially the same javascript code from earlier, with type annotations and minor changes for WebAssembly:
+AssemblyScript compiles a subset of typescript to webassembly. To get an idea of how simple it is to write it, here's essentially the same javascript code from earlier, with type annotations and minor changes for webassembly:
 
 ```jsx
 declare const canvas_width: i32;
@@ -457,7 +454,7 @@ export function compute(): void {
 }
 ```
 
-The only really noteworthy change was to not have `new` in the hot loop. The Assemblyscript garbage collector had some trouble with it and total allocation would exceed WebAssembly's 100  page memory limit[1]. I suspect that sort of code will be usable once the WebAssembly GC proposals, which allow wasm modules to hook into the browser's GC, are implemented.
+The only really noteworthy change was to not have `new` in the hot loop. The Assemblyscript garbage collector had some trouble with it and total allocation would exceed webassembly's 100  page memory limit[1]. I suspect that sort of code will be usable once the webassembly GC proposals, which allow wasm modules to hook into the browser's GC, are implemented.
 
 ### Threading
 
@@ -468,7 +465,7 @@ Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-This is to ensure cross-origin isolation, which protects against memory being exfiltrated somehow (I might explore this in the future, but that's about all I know for the moment.) WebAssembly memories can also be created with a backing SharedArrayBuffer (Link to explanation), which allows fast multithreading, as separate web-workers can run the same Webassembly module and write their results to the same memory, meaning that large objects don't need to be passed around using postmessage, and the many O(N) overheads to do with copying and creating new arrays can be avoided.
+This is to ensure cross-origin isolation, which protects against memory being exfiltrated somehow (I might explore this in the future, but that's about all I know for the moment.) webassembly memories can also be created with a backing SharedArrayBuffer, which allows fast multithreading, as separate web-workers can run the same webassembly module and write their results to the same memory, meaning that large objects don't need to be passed around using postmessage, and the many O(N) overheads to do with copying and creating new arrays can be avoided.
 
 However, while Assemblyscript [allows](https://www.assemblyscript.org/stdlib/builtins.html#atomics-%F0%9F%A6%84) access to atomic instructions, it does not implement any sort of locking. So any program that reads and writes to memory will need to be adjusted to thread with shared memory. This means that the program seen above, with its Complex class and set calls reading and writing to the linear memory quite often, is very prone to... interesting behaviour when threaded.
 
@@ -476,7 +473,7 @@ However, while Assemblyscript [allows](https://www.assemblyscript.org/stdlib/bui
 
 Exhibit A of nondeterministic behavior
 
-That being said, for small examples such as fractal calculation, its quite easy to limit mutability to local variables (which are on the stack, not in the linear memory, and so are not shared) and avoid the problem entirely. Like in the following code:
+That being said, for small examples such as fractal calculation, it's quite easy to limit mutability to local variables (which are on the stack, not in the linear memory, and so are not shared) and avoid the problem entirely. Like in the following code:
 
 ```jsx
 @inline
@@ -579,7 +576,7 @@ install:
 	npm i 
 ```
 
-### MULTITHREADED SIMD SPEED
+### Multithreaded SIMD Speed
 
 Benchmark results will be discussed near the end of this article, but the speed of the multithreaded SIMD code is quite astonishing, roughly 3x the speed of multithreaded JS using sharedarraybuffers, and I'm guessing that's held back by module message passing overheads. [HERE](https://mandelbrot-ascript.vercel.app/) is a basic mandelbrot zoom implementation using it (only works in firefox(≥90 on apple m1) and chrome, [here's](https://github.com/pretentious7/mandelbrot-ascript) the github repo.) I'll be working in boundary estimation and period checking along with xaos zoom algorithm into it in a couple of months, so stay tuned for that!
 
@@ -591,13 +588,11 @@ I'm also fairly certain that this is the first(?) SIMD mandelbrot implementation
 
 <br>
 
------
-
 <br>
 
 ## Results
 
-First, we know that our benchmarks here are not rigorous in the slightest. Their purpose was to give us an idea of the rough performance capabilities of the tools we're working with, to help inform our choices as we port certain programs (stay tuned!) to WebAssembly. We will be refining this tool in the future, and hope to have (somehow) bytecode outputs and flamegraphs on the site.
+First, we know that our benchmarks here are not rigorous in the slightest. Their purpose was to give us an idea of the rough performance capabilities of the tools we're working with, to help inform our choices as we port certain programs (stay tuned!) to webassembly. We will be refining this tool in the future, and hope to have (somehow) bytecode outputs and flamegraphs on the site.
 
 <table>
 <thead>
@@ -624,9 +619,14 @@ First, we know that our benchmarks here are not rigorous in the slightest. Their
 <td>129</td>
 </tr>
 <tr>
-<td>Singlethreaded-Rust</td>
-<td>890</td>
-<td>745</td>
+<td>Singlethreaded-Rust * **</td>
+<td>296</td>
+<td>300</td>
+</tr>
+<tr>
+<td>Simple Assemblyscript</td>
+<td>494</td>
+<td>497</td>
 </tr>
 <tr>
 <td>Optimized non-SIMD AssemblyScript</td>
@@ -649,13 +649,15 @@ First, we know that our benchmarks here are not rigorous in the slightest. Their
 
 *All numbers approximate, gathered from fresh browser session after reboot on an HP Envy 13 with an i5-8265U CPU @ 1.60GHz and 8gb of RAM running Ubuntu 20.04.2 with kernel 5.8.0. Average of 5 runs (first 2 runs dropped)*
 
-The results of our benchmark (at least approximately) line up with what one would expect, but we find a few items of interest. First, as far as the javascript implementations are concerned, Firefox is *significantly* slower than chrome. Second, WebAssembly speeds are comparable for both browsers.
+The results of our benchmark (at least approximately) line up with what one would expect, but we find a few items of interest. First, as far as the javascript implementations are concerned, Firefox is *significantly* slower than chrome. Second, webassembly speeds are comparable for both browsers.
 
-The performance advantage of WebAssembly (without SIMD) over javascript for this benchmark is basically negligible for chrome. In a future article it'll be interesting to see whether the bytecode generated is also similar.
+The performance advantage of webassembly (without SIMD) over javascript for this benchmark is basically negligible for chrome. In a future article it'll be interesting to see whether the bytecode generated is also similar.
 
-But the key insight here is clear, WebAssembly offers *predictable* performance, across browser engines. We'll be adding fallbacks for safari later to see if this holds there as well. Further, we'll compare the results to native code.
+But the key insight here is clear, webassembly offers *predictable* performance, across browser engines. We'll be adding fallbacks for safari later to see if this holds there as well. Further, we'll compare the results to native code.
 
 **The rust code can likely be sped up with some optimizations here and there, but for a rough effort from a novice rust programmer, this is representative.*
+
+*** The rust code was improved by @MaxGraey and now lines up with what one would expect*
 
 See the demo [here](https://js-wasm-mandelbrot-benchmark-3.vercel.app/).
 
@@ -667,7 +669,7 @@ As tools of application distribution, browsers have some undeniable advantages o
 
 Further, cloud offloading enables users to easily sustain state across devices and in some cases avoid calculation heavy code in the interests of battery life or smooth performance. The easiest way to realize these advantages is to distribute one's application in an environment that does this *by default*: the browser. But a prerequisite for this is that the experience is not overly hampered by being in the browser, and bringing webassembly to near native performance is a key part of that. 
 
-There is an opportunity here to allow people to access performance heavy applications like games and simulations on their devices without having to get into the nasty business of managing local state on their devices, which accounts for what, 99% of problems installing and using software? We want to help build this, and over the next few weeks, will be releasing demos to show what it might look like, so stay tuned! 
+There is an opportunity here to allow people to access performance heavy applications like games and simulations on their devices without having to get into the nasty business of managing local state, which accounts for what, 99% of problems installing and using software? We want to help build this, and over the next few weeks, will be releasing demos to show what it might look like, so stay tuned! 
 
 *Of course, the possible bad end here is that the canvas ends up as an inefficient GUI toolkit to have fungible programmers at the cost of user experience, we hope that doesn't happen.*
 
@@ -675,7 +677,7 @@ There is an opportunity here to allow people to access performance heavy applica
 
 ## Further Reading:
 
-David Beazley. (2019). A Talk Near the Future of Python (a.k.a., Dave live-codes a WebAssembly Interpreter). [https://www.youtube.com/watch?v=r-A78RgMhZU](https://www.youtube.com/watch?v=r-A78RgMhZU)
+David Beazley. (2019). A Talk Near the Future of Python (a.k.a., Dave live-codes a Webassembly Interpreter). [https://www.youtube.com/watch?v=r-A78RgMhZU](https://www.youtube.com/watch?v=r-A78RgMhZU)
 
 Firefox’s low-latency webassembly compiler – wingolog. (n.d.). Retrieved June 19, 2021, from [https://wingolog.org/archives/2020/03/25/firefoxs-low-latency-webassembly-compiler](https://wingolog.org/archives/2020/03/25/firefoxs-low-latency-webassembly-compiler)
 
