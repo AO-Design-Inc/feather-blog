@@ -5,7 +5,7 @@ katex: true
 date:   2021-06-21 11:10:02 -0500
 author: "Ojasvin Kirpane, Abhishek Cherath, Jo Gao & Abhinuv Allu"
 redirect_from: "/jekyll/update/2021/06/21/WasmPerformance.html"
-permalink: mandelbrot
+permalink: mandelbrot.html
 categories: jekyll update
 ---
 ![Mandelbrot]({{site.baseurl}}/assets/1-Thumbnail-Mandelbrot.png)

@@ -5,7 +5,7 @@ katex: true
 date:   2021-08-03 3:49:02 -0500
 author: "Jo Gao"
 redirect_from: "/jekyll/update/2021/08/03/webgl.html"
-permalink: WebGL
+permalink: WebGL.html
 categories: jekyll update
 ---
 ![webgl]({{site.baseurl}}/assets/2-Thumbnail-webgl.png)
